@@ -4,6 +4,7 @@ const Setting = require('../models/Setting');
 const { asyncHandler, httpError } = require('../utils/helpers');
 const { round2 } = require('../utils/money');
 const { allocateItems } = require('../utils/saleReports');
+const Product = require('../models/Product');
 
 const PERIODS = ['daily', 'weekly', 'monthly'];
 const startOfDay = (d) => new Date(d.getFullYear(), d.getMonth(), d.getDate());
@@ -236,5 +237,53 @@ exports.salesAnalytics = asyncHandler(async (req, res) => {
     },
     top: { products: rank(topProducts), services: rank(topServices) },
     methods: [...methods.values()].sort((a, b) => b.amount - a.amount).map((m) => ({ ...m, amount: round2(m.amount) })),
+  });
+});
+
+const cashBetween = (docs, from, to) =>
+  docs.reduce(
+    (total, doc) =>
+      total +
+      doc.payments.reduce((sum, p) => {
+        const at = new Date(p.paid_at);
+        if (at < from || at >= to) return sum;
+        return sum + (p.payment_status === 'paid' ? p.amount : p.payment_status === 'refunded' ? -p.amount : 0);
+      }, 0),
+    0
+  );
+
+exports.overview = asyncHandler(async (req, res) => {
+  const { OPEN_STATUSES } = ServiceOrder;
+  const today = startOfDay(new Date());
+  const tomorrow = addDays(today, 1);
+  const limit30 = addDays(today, -30);
+
+  const [statusCounts, overdue, readyOver30, lowStock, osPay, salePay, salesToday, deliveredToday] = await Promise.all([
+    ServiceOrder.aggregate([{ $match: { status: { $in: OPEN_STATUSES } } }, { $group: { _id: '$status', total: { $sum: 1 } } }]),
+    ServiceOrder.countDocuments({ status: { $in: OPEN_STATUSES }, estimated_delivery_at: { $lt: today } }),
+    ServiceOrder.countDocuments({ status: 'ready', ready_at: { $lt: limit30 } }),
+    Product.countDocuments({ is_active: true, $expr: { $lte: ['$stock_quantity', '$min_stock'] } }),
+    ServiceOrder.find({ 'payments.paid_at': { $gte: today, $lt: tomorrow } }).select('payments').lean(),
+    Sale.find({ 'payments.paid_at': { $gte: today, $lt: tomorrow } }).select('payments').lean(),
+    Sale.countDocuments({ created_at: { $gte: today, $lt: tomorrow } }),
+    ServiceOrder.countDocuments({ delivered_at: { $gte: today, $lt: tomorrow } }),
+  ]);
+
+  const counts = { received: 0, in_diagnosis: 0, in_repair: 0, ready: 0 };
+  statusCounts.forEach((s) => {
+    counts[s._id] = s.total;
+  });
+
+  res.json({
+    counts,
+    open_orders: Object.values(counts).reduce((a, b) => a + b, 0),
+    overdue_orders: overdue, // abertas com previsão de entrega anterior a hoje
+    ready_over_30_days: readyOver30, // risco de abandono (prazo de retirada)
+    low_stock_products: lowStock,
+    today: {
+      revenue: round2(cashBetween(osPay, today, tomorrow) + cashBetween(salePay, today, tomorrow)),
+      sales_count: salesToday,
+      delivered_orders: deliveredToday,
+    },
   });
 });
