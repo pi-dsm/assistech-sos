@@ -3,6 +3,8 @@ import api, { errMsg } from '../services/api';
 import { useToast } from '../context/ToastContext';
 import { BR_STATES, formatDocument, formatPhone } from '../utils/format';
 import { btnGhost, btnPrimary, Field, inputCls, Modal } from './ui';
+import VoiceFill from './VoiceFill';
+import { supplierVoice } from '../utils/voiceSchemas';
 
 const blank = { name: '', document: '', contact_name: '', phone: '', email: '', address: '', city: '', state: '', notes: '' };
 
@@ -31,6 +33,9 @@ export default function SupplierFormModal({ supplier, onClose, onSaved }) {
   return (
     <Modal title={supplier?.id ? 'Editar fornecedor' : 'Novo fornecedor'} onClose={onClose}>
       <form onSubmit={save} className="grid gap-3 sm:grid-cols-2">
+        <div className="sm:col-span-2">
+          <VoiceFill schema={supplierVoice.schema} example={supplierVoice.example} onFill={(v) => set(v)} />
+        </div>
         <Field label="Nome / razão social *" className="sm:col-span-2">
           <input className={inputCls} required autoFocus value={form.name} onChange={(e) => set({ name: e.target.value })} />
         </Field>

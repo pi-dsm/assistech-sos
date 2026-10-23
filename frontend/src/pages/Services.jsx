@@ -5,6 +5,8 @@ import { useAuth } from '../context/AuthContext';
 import { useToast } from '../context/ToastContext';
 import { brl } from '../utils/format';
 import { btnGhost, btnPrimary, btnSm, ConfirmModal, EmptyState, Field, inputCls, Modal, PageHeader, Spinner } from '../components/ui';
+import VoiceFill from '../components/VoiceFill';
+import { serviceVoice } from '../utils/voiceSchemas';
 
 const blank = { name: '', description: '', price: '', cost_price: '' };
 
@@ -98,6 +100,7 @@ export default function Services() {
       {form && (
         <Modal title={form.id ? 'Editar serviço' : 'Novo serviço'} onClose={() => setForm(null)} size="sm">
           <form onSubmit={save} className="space-y-3">
+            <VoiceFill schema={serviceVoice.schema} example={serviceVoice.example} onFill={(v) => setForm((s) => ({ ...s, ...v }))} />
             <Field label="Nome *"><input className={inputCls} required autoFocus value={form.name} onChange={(e) => setForm((s) => ({ ...s, name: e.target.value }))} /></Field>
             <Field label="Descrição"><input className={inputCls} value={form.description || ''} onChange={(e) => setForm((s) => ({ ...s, description: e.target.value }))} /></Field>
             <div className="grid grid-cols-2 gap-3">

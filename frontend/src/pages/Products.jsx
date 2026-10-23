@@ -6,6 +6,8 @@ import { useToast } from '../context/ToastContext';
 import { brl, PRODUCT_CATEGORIES } from '../utils/format';
 import { btnGhost, btnPrimary, btnSm, ConfirmModal, EmptyState, Field, inputCls, Modal, PageHeader, Spinner } from '../components/ui';
 import SupplierSelect from '../components/SupplierSelect';
+import VoiceFill from '../components/VoiceFill';
+import { productVoice } from '../utils/voiceSchemas';
 
 const blank = { name: '', barcode: '', category: 'accessory', supplier: '', cost_price: '', sale_price: '', stock_quantity: '', min_stock: '' };
 
@@ -96,6 +98,12 @@ export default function Products() {
     }
   };
 
+  const fillByVoice = (v) =>
+    setForm((s) => {
+      const { stock_quantity: stock, ...rest } = v;
+      return { ...s, ...rest, ...(!s.id && stock !== undefined ? { stock_quantity: stock } : {}) };
+    });
+
   return (
     <div className="mx-auto max-w-6xl space-y-4">
       <PageHeader title="Produtos e estoque" subtitle="Cada produto tem código de barras único, usado no PDV.">
@@ -159,6 +167,9 @@ export default function Products() {
       {form && (
         <Modal title={form.id ? 'Editar produto' : 'Novo produto'} onClose={() => setForm(null)}>
           <form onSubmit={save} className="grid gap-3 sm:grid-cols-2">
+            <div className="sm:col-span-2">
+              <VoiceFill schema={productVoice.schema} example={productVoice.example} onFill={fillByVoice} />
+            </div>
             <Field label="Nome *" className="sm:col-span-2">
               <input className={inputCls} required autoFocus value={form.name} onChange={(e) => setForm((s) => ({ ...s, name: e.target.value }))} />
             </Field>
