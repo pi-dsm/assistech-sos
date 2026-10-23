@@ -2,7 +2,10 @@ import { useEffect, useRef, useState } from 'react';
 import { Barcode, Search, Trash2, UserCheck } from 'lucide-react';
 import api, { errMsg } from '../services/api';
 import { useToast } from '../context/ToastContext';
-import { brl, round2 } from '../utils/format';
+import { brl, round2, METHODS } from '../utils/format';
+import VoiceButton from '../components/VoiceButton';
+import { parseSaleCommand } from '../utils/saleVoice';
+import { stripAccents } from '../utils/spokenNumbers';
 import { btnGhost, btnPrimary, Card, EmptyState, inputCls, PageHeader } from '../components/ui';
 import PaymentsEditor, { emptyPayment, paymentsPayload, sumPayments } from '../components/PaymentsEditor';
 
@@ -24,6 +27,7 @@ export default function NewSale() {
   const [customerResults, setCustomerResults] = useState([]);
   const [saving, setSaving] = useState(false);
   const [notes, setNotes] = useState('');
+  const [catalog, setCatalog] = useState([]);
 
   const commit = (next) => {
     cartRef.current = next;
@@ -33,6 +37,7 @@ export default function NewSale() {
 
   useEffect(() => {
     api.get('/services').then((r) => setServices(r.data)).catch(() => { });
+    api.get('/products', { params: { limit: 500 } }).then((r) => setCatalog(r.data)).catch(() => { });
     focusScan();
   }, []);
 
@@ -56,25 +61,27 @@ export default function NewSale() {
     return () => clearTimeout(id);
   }, [customerQ, customer]);
 
-  const addProduct = (p) => {
+  const addProduct = (p, qty = 1) => {
     if (p.stock_quantity <= 0) return toast.error(`"${p.name}" está sem estoque`);
     const list = cartRef.current;
     const line = list.find((i) => i.key === `p:${p.id}`);
-    if (line && line.quantity >= p.stock_quantity) return toast.error(`Estoque máximo de "${p.name}" atingido (${p.stock_quantity})`);
+    const wanted = (line ? line.quantity : 0) + qty;
+    const next = Math.min(wanted, p.stock_quantity);
+    if (wanted > p.stock_quantity) toast.error(`Estoque de "${p.name}" limitado a ${p.stock_quantity}`);
     commit(
       line
-        ? list.map((i) => (i.key === line.key ? { ...i, quantity: i.quantity + 1 } : i))
-        : [...list, { key: `p:${p.id}`, item_type: 'product', product_id: p.id, name: p.name, barcode: p.barcode, unit_price: p.sale_price, quantity: 1, max: p.stock_quantity }]
+        ? list.map((i) => (i.key === line.key ? { ...i, quantity: next } : i))
+        : [...list, { key: `p:${p.id}`, item_type: 'product', product_id: p.id, name: p.name, barcode: p.barcode, unit_price: p.sale_price, quantity: next, max: p.stock_quantity }]
     );
   };
 
-  const addService = (s) => {
+  const addService = (s, qty = 1) => {
     const list = cartRef.current;
     const line = list.find((i) => i.key === `s:${s.id}`);
     commit(
       line
-        ? list.map((i) => (i.key === line.key ? { ...i, quantity: i.quantity + 1 } : i))
-        : [...list, { key: `s:${s.id}`, item_type: 'service', service_id: s.id, name: s.name, unit_price: s.price, quantity: 1 }]
+        ? list.map((i) => (i.key === line.key ? { ...i, quantity: i.quantity + qty } : i))
+        : [...list, { key: `s:${s.id}`, item_type: 'service', service_id: s.id, name: s.name, unit_price: s.price, quantity: qty }]
     );
     focusScan();
   };
@@ -92,6 +99,71 @@ export default function NewSale() {
       toast.error(errMsg(err));
     }
     focusScan();
+  };
+
+  const addByName = ({ quantity, service, term }) => {
+    const needle = norm(term);
+    const candidates = [
+      ...services.filter((s) => norm(s.name).includes(needle)).map((item) => ({ kind: 'service', item })),
+      ...(service ? [] : catalog.filter((p) => norm(p.name).includes(needle)).map((item) => ({ kind: 'product', item }))),
+    ];
+    if (candidates.length === 0) return toast.error(`Nada encontrado para “${term}”.`);
+
+    let chosen = candidates.length === 1 ? candidates[0] : candidates.find((c) => norm(c.item.name) === needle);
+    if (!chosen) {
+      setQ(term);
+      return toast.error(`Encontrei mais de um item para “${term}”. Escolha na lista de busca.`);
+    }
+    if (chosen.kind === 'service') addService(chosen.item, quantity);
+    else addProduct(chosen.item, quantity);
+    return toast.success(`Adicionado: ${quantity}× ${chosen.item.name}`);
+  };
+
+  const handleVoice = async (text) => {
+    const cmd = parseSaleCommand(text);
+    if (!cmd) {
+      return toast.error(`Não entendi “${text}”. Exemplos: “adicionar dois cabos lightning”, “desconto de 5 reais”, “pagamento pix”.`);
+    }
+    switch (cmd.type) {
+      case 'clear':
+        commit([]);
+        return toast.success('Carrinho limpo');
+      case 'discount':
+        setDiscount(String(cmd.value));
+        return toast.success(`Desconto de ${brl(cmd.value)}`);
+      case 'notes':
+        setNotes(cmd.text);
+        return toast.success('Observação preenchida');
+      case 'payment':
+        setPayments((list) =>
+          list.length
+            ? list.map((p, i) => (i === 0 ? { ...p, payment_method: cmd.method, installments: cmd.installments } : p))
+            : [{ ...emptyPayment(), payment_method: cmd.method, installments: cmd.installments }]
+        );
+        return toast.success(`Pagamento: ${METHODS[cmd.method]}${cmd.installments > 1 ? ` ${cmd.installments}x` : ''}`);
+      case 'barcode':
+        try {
+          const { data } = await api.get(`/products/barcode/${encodeURIComponent(cmd.code)}`);
+          return addProduct(data);
+        } catch (err) {
+          return toast.error(errMsg(err));
+        }
+      case 'customer':
+        try {
+          const { data } = await api.get('/customers', { params: { q: cmd.term, limit: 5 } });
+          if (data.length === 1) {
+            setCustomer(data[0]);
+            return toast.success(`Cliente: ${data[0].name}`);
+          }
+          if (data.length === 0) return toast.error(`Nenhum cliente encontrado para “${cmd.term}”.`);
+          setCustomerQ(cmd.term);
+          return toast.error('Mais de um cliente encontrado. Escolha na lista.');
+        } catch (err) {
+          return toast.error(errMsg(err));
+        }
+      default:
+        return addByName(cmd);
+    }
   };
 
   const setQty = (key, value) => {
@@ -153,6 +225,10 @@ export default function NewSale() {
 
       <div className="grid gap-4 lg:grid-cols-[1fr_380px]">
         <div className="space-y-4">
+          <div className="mb-3 flex flex-wrap items-center gap-3">
+            <VoiceButton label="Comandos de voz" onTranscript={handleVoice} />
+            <span className="text-xs text-slate-500">Ex.: “adicionar dois cabos lightning”, “desconto de 5 reais”, “pagamento pix”. A venda é finalizada só pelo botão.</span>
+          </div>
           <Card>
             <div className="grid gap-3 sm:grid-cols-2">
               <div className="relative">
