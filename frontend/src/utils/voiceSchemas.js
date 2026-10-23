@@ -44,3 +44,27 @@ export const supplierVoice = {
     { key: 'notes', label: 'observações', type: 'text', words: ['observações', 'observacoes', 'observação'] },
   ],
 };
+
+export const orderVoice = {
+  example: '“cliente João da Silva, telefone 14 99811 2233, marca Samsung, modelo A54, problema tela trincada, prazo de orçamento 1 dia, prazo de entrega 5 dias”',
+  schema: [
+    { key: 'customer_name', label: 'cliente', type: 'name', words: ['nome do cliente', 'cliente'] },
+    { key: 'customer_phone', label: 'telefone', type: 'phone', words: ['telefone', 'celular', 'whatsapp'] },
+    { key: 'customer_alt_phone', label: 'telefone alternativo', type: 'phone', words: ['telefone alternativo', 'outro telefone', 'segundo telefone'] },
+    {
+      key: 'device_type', label: 'tipo de aparelho', type: 'enum', words: ['tipo de aparelho', 'tipo'],
+      options: {
+        phone: ['celular', 'smartphone'], tablet: ['tablet'], laptop: ['notebook', 'laptop'], desktop: ['computador', 'desktop'],
+        console: ['console', 'videogame', 'video game'], smartwatch: ['smartwatch', 'relogio'], tv: ['tv', 'televisao'], other: ['outro'],
+      },
+    },
+    { key: 'brand', label: 'marca', type: 'name', words: ['marca'] },
+    { key: 'model', label: 'modelo', type: 'text', words: ['modelo'] },
+    { key: 'serial_number', label: 'série/IMEI', type: 'digits', words: ['imei', 'número de série', 'série', 'serie'] },
+    { key: 'pin', label: 'PIN', type: 'digits', words: ['pin', 'senha numérica'] },
+    { key: 'reported_issue', label: 'problema', type: 'text', words: ['problema', 'defeito', 'reclamação'] },
+    { key: 'budget_days', label: 'prazo de orçamento', type: 'integer', words: ['prazo de orçamento', 'orçamento'] },
+    { key: 'delivery_days', label: 'prazo de entrega', type: 'integer', words: ['prazo de entrega', 'entrega'] },
+    { key: 'internal_notes', label: 'observações', type: 'text', words: ['observações internas', 'observações', 'observação'] },
+  ],
+};

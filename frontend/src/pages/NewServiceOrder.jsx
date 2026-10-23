@@ -10,6 +10,8 @@ import { btnGhost, btnPrimary, Card, Field, inputCls, PageHeader } from '../comp
 import PatternPad from '../components/os/PatternPad';
 import ReceiptModal from '../components/os/ReceiptModal';
 import PatternPlayer from '../components/os/PatternPlayer';
+import VoiceFill from '../components/VoiceFill';
+import { orderVoice } from '../utils/voiceSchemas';
 
 const blankCustomer = { name: '', phone: '', alternative_phone: '' };
 const blankDevice = { device_type: 'phone', brand: '', model: '' };
@@ -22,6 +24,7 @@ const passcodePayload = ({ kind, pin, written, pattern }) => {
   if (kind === 'pattern') return { kind, pattern };
   return { kind: 'none' };
 };
+
 const passcodeFromDevice = (d) => ({
   kind: d?.passcode?.kind || 'none',
   pin: d?.passcode?.pin || '',
@@ -152,6 +155,31 @@ export default function NewServiceOrder() {
     } finally {
       setSaving(false);
     }
+  };
+
+  const fillByVoice = (v) => {
+    if (!customer) {
+      setNewCustomer((s) => ({
+        ...s,
+        ...(v.customer_name && { name: v.customer_name }),
+        ...(v.customer_phone && { phone: v.customer_phone }),
+        ...(v.customer_alt_phone && { alternative_phone: v.customer_alt_phone }),
+      }));
+    }
+    if (deviceId === '') {
+      setDevice((s) => ({
+        ...s,
+        ...(v.device_type && { device_type: v.device_type }),
+        ...(v.brand && { brand: v.brand }),
+        ...(v.model && { model: v.model }),
+        ...(v.serial_number && { serial_number: v.serial_number }),
+      }));
+    }
+    if (v.pin) setPasscode({ ...blankPasscode, kind: 'pin', pin: v.pin.slice(0, 8) });
+    if (v.reported_issue) setForm((s) => ({ ...s, reported_issue: v.reported_issue }));
+    if (v.internal_notes) setForm((s) => ({ ...s, internal_notes: v.internal_notes }));
+    if (v.budget_days !== undefined) setBudget(newDeadline(Math.min(v.budget_days, 90)));
+    if (v.delivery_days !== undefined) setDelivery(newDeadline(Math.min(v.delivery_days, 90)));
   };
 
   return (
