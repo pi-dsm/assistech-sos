@@ -6,8 +6,8 @@ import {
 import { useAuth } from '../context/AuthContext';
 import { Logo } from '../components/Layout';
 
-// WhatsApp comercial do botão "Quero assinar" (troque em frontend/.env: VITE_SALES_WHATSAPP=5514999999999)
-const SALES_WHATSAPP = import.meta.env.VITE_SALES_WHATSAPP || '5514999999999';
+// WhatsApp comercial do botão "Quero assinar" (troque em frontend/.env: VITE_SALES_WHATSAPP=5514996094940)
+const SALES_WHATSAPP = import.meta.env.VITE_SALES_WHATSAPP || '5514996094940';
 const SUBSCRIBE = `https://wa.me/${SALES_WHATSAPP}?text=${encodeURIComponent('Olá! Quero conhecer os planos do AssisTech SOS para a minha assistência.')}`;
 const DEMO_STORE = '/loja/compucell'; // vitrine de exemplo (seed)
 
