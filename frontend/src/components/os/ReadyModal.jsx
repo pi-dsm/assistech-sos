@@ -8,7 +8,7 @@ import SupplierSelect from '../SupplierSelect';
 
 const uid = () => Math.random().toString(36).slice(2);
 const blankPart = () => ({
-  key: uid(), description: '', is_own_stock: false, supplier: '', supplier_name: '',
+  key: uid(), part_name: '', is_own_stock: false, supplier: '', supplier_name: '',
   purchase_reference: '', cost_price: '', sale_price: '', quantity: 1, warranty_days: '', notes: '',
 });
 

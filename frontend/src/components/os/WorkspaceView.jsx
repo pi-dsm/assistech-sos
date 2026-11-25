@@ -12,7 +12,7 @@ const GRID = {
   5: 'sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5',
 };
 
-function SortableCard({ order, onOpen, onStatusChange }) {
+function SortableCard({ order, onOpen, onEdit, onStatusChange }) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: order.id });
   return (
     <div
@@ -22,12 +22,12 @@ function SortableCard({ order, onOpen, onStatusChange }) {
       style={{ transform: CSS.Transform.toString(transform), transition }}
       className={`cursor-grab active:cursor-grabbing ${isDragging ? 'z-10 opacity-60' : ''}`}
     >
-      <OrderCard order={order} onOpen={onOpen} onStatusChange={onStatusChange} />
+      <OrderCard order={order} onOpen={onOpen} onEdit={onEdit} onStatusChange={onStatusChange} />
     </div>
   );
 }
 
-export default function WorkspaceView({ orders, savedOrder, onReorder, onOpen, onStatusChange }) {
+export default function WorkspaceView({ orders, savedOrder, onReorder, onOpen, onEdit, onStatusChange }) {
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 6 } }));
   const [columns, setColumns] = useState(() => Number(localStorage.getItem('workspace_columns')) || 4);
 
@@ -64,7 +64,7 @@ export default function WorkspaceView({ orders, savedOrder, onReorder, onOpen, o
       <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleEnd}>
         <SortableContext items={sorted.map((o) => o.id)} strategy={rectSortingStrategy}>
           <div className={`grid grid-cols-1 gap-3 ${GRID[columns]}`}>
-            {sorted.map((o) => <SortableCard key={o.id} order={o} onOpen={onOpen} onStatusChange={onStatusChange} />)}
+            {sorted.map((o) => <SortableCard key={o.id} order={o} onOpen={onOpen} onEdit={onEdit} onStatusChange={onStatusChange} />)}
           </div>
         </SortableContext>
       </DndContext>
