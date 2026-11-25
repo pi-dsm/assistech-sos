@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Lock, RotateCcw } from 'lucide-react';
+import { Lock, RotateCcw } from '../icons';
 import api, { errMsg } from '../../services/api';
 import { useToast } from '../../context/ToastContext';
 import useHolidayCalendar from '../../hooks/useHolidayCalendar';

@@ -2,7 +2,7 @@ import { brl } from '../../utils/format';
 
 // Lista com barras proporcionais. items: [{ name, count? , revenue? }]
 // valueKey 'count' mostra número; 'revenue' mostra reais.
-export default function RankList({ items, empty = 'Sem dados na janela.', valueKey = 'count', barClass = 'bg-orange-500' }) {
+export default function RankList({ items, empty = 'Sem dados na janela.', valueKey = 'count', barClass = 'bg-blue-600' }) {
   if (!items.length) return <p className="text-sm text-slate-400">{empty}</p>;
   const max = Math.max(...items.map((i) => i[valueKey])) || 1;
   return (

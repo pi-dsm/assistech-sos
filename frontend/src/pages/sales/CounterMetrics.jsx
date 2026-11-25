@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Bar, CartesianGrid, Cell, ComposedChart, Legend, Line, Pie, PieChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts';
-import { ArrowDownRight, ArrowUpRight, Calculator, CreditCard, Receipt, RefreshCw, Save, Target, TrendingUp } from 'lucide-react';
+import { ArrowDownRight, ArrowUpRight, Calculator, CreditCard, Receipt, RefreshCw, Save, Target, TrendingUp } from '../../components/icons';
 import api, { errMsg } from '../../services/api';
 import { useAuth } from '../../context/AuthContext';
 import { useToast } from '../../context/ToastContext';
@@ -133,7 +133,7 @@ export default function CounterMetrics() {
       ) : (
         <>
           <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
-            <Kpi label="Faturamento do PDV" icon={TrendingUp} value={brl(c.revenue)} accent="bg-orange-50 text-orange-600">
+            <Kpi label="Faturamento do PDV" icon={TrendingUp} value={brl(c.revenue)} accent="bg-blue-50 text-blue-700">
               {delta === null ? 'Sem base de comparação' : (
                 <span className={`inline-flex items-center gap-0.5 font-bold ${delta >= 0 ? 'text-emerald-600' : 'text-red-600'}`}>
                   {delta >= 0 ? <ArrowUpRight size={14} /> : <ArrowDownRight size={14} />}{Math.abs(delta).toLocaleString('pt-BR')}%
@@ -221,7 +221,7 @@ export default function CounterMetrics() {
           </Card>
 
           <div className="grid gap-6 xl:grid-cols-[1.4fr_1fr]">
-            <Card title="Giro de estoque (turnover)" right={<span className="text-xs font-semibold text-slate-500">Giro geral: <b className="text-ink-900">{calc.overallTurnover.toLocaleString('pt-BR', { maximumFractionDigits: 2 })}×</b> no período</span>}>
+            <Card title="Giro de estoque (turnover)" right={<span className="text-xs font-semibold text-slate-500">Giro geral: <b className="text-slate-900">{calc.overallTurnover.toLocaleString('pt-BR', { maximumFractionDigits: 2 })}×</b> no período</span>}>
               <div className="max-h-80 overflow-auto rounded-lg border border-slate-100">
                 <table className="w-full min-w-[520px] text-sm">
                   <thead className="sticky top-0 bg-slate-50 text-left text-xs uppercase text-slate-500">

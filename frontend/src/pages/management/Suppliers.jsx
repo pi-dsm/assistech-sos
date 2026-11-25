@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
-import { Eye, LayoutGrid, List, Mail, MapPin, Pencil, Phone, Plus, Power } from 'lucide-react';
+import { Eye, LayoutGrid, List, Mail, MapPin, Pencil, Phone, Plus, Power } from '../../components/icons';
 import api, { errMsg } from '../../services/api';
 import { useAuth } from '../../context/AuthContext';
 import { useToast } from '../../context/ToastContext';

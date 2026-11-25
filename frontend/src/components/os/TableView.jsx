@@ -1,4 +1,4 @@
-import { Eye, Pencil } from 'lucide-react';
+import { Eye, Pencil } from '../icons';
 import { brl, dateOnly, dt, isOverdue, stayDuration } from '../../utils/format';
 import StatusSelect from './StatusSelect';
 
@@ -16,7 +16,7 @@ export default function TableView({ orders, onOpen, onEdit, onStatusChange }) {
         <tbody className="divide-y divide-slate-100">
           {orders.map((o) => (
             <tr key={o.id} onClick={() => onOpen(o)} className="cursor-pointer hover:bg-blue-50/40">
-              <td className="px-3 py-2.5 font-bold text-ink-900">#{o.service_order_number}</td>
+              <td className="px-3 py-2.5 font-bold text-slate-900">#{o.service_order_number}</td>
               <td className="px-3 py-2.5">{o.device?.brand} {o.device?.model}</td>
               <td className="px-3 py-2.5">{o.customer?.name}</td>
               <td className="max-w-56 truncate px-3 py-2.5 text-slate-500" title={o.reported_issue}>{o.reported_issue}</td>
@@ -27,7 +27,7 @@ export default function TableView({ orders, onOpen, onEdit, onStatusChange }) {
               <td className="px-3 py-2.5"><StatusSelect order={o} onChange={onStatusChange} /></td>
               <td className="px-3 py-2.5" onClick={(e) => e.stopPropagation()}>
                 <div className="flex justify-end gap-1">
-                  <button type="button" className="rounded-lg p-1.5 text-slate-500 hover:bg-slate-100 hover:text-ink-900" onClick={() => onOpen(o)} aria-label={`Detalhes da OS ${o.service_order_number}`} title="Detalhes"><Eye size={16} /></button>
+                  <button type="button" className="rounded-lg p-1.5 text-slate-500 hover:bg-slate-100 hover:text-slate-900" onClick={() => onOpen(o)} aria-label={`Detalhes da OS ${o.service_order_number}`} title="Detalhes"><Eye size={16} /></button>
                   {onEdit && <button type="button" className="rounded-lg p-1.5 text-blue-700 hover:bg-blue-50" onClick={() => onEdit(o)} aria-label={`Editar OS ${o.service_order_number}`} title="Editar"><Pencil size={16} /></button>}
                 </div>
               </td>

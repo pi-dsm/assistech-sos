@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Undo2 } from 'lucide-react';
+import { Undo2 } from '../icons';
 import api, { errMsg } from '../../services/api';
 import { useAuth } from '../../context/AuthContext';
 import { useToast } from '../../context/ToastContext';

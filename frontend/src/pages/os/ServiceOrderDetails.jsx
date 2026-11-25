@@ -1,5 +1,5 @@
 import { Link, useNavigate, useParams } from 'react-router-dom';
-import { ArrowLeft } from 'lucide-react';
+import { ArrowLeft } from '../../components/icons';
 import OrderDetails from '../../components/os/OrderDetails';
 
 // Ficha completa da OS (senha do aparelho, histórico de status, documentos e retornos)

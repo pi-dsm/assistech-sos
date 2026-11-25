@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Plus, Trash2 } from 'lucide-react';
+import { Plus, Trash2 } from '../icons';
 import api, { errMsg } from '../../services/api';
 import { useToast } from '../../context/ToastContext';
 import { brl, round2 } from '../../utils/format';

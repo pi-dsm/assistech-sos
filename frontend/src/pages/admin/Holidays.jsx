@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from 'react';
-import { Plus, Trash2 } from 'lucide-react';
+import { Plus, Trash2 } from '../../components/icons';
 import api, { errMsg } from '../../services/api';
 import { useToast } from '../../context/ToastContext';
 import { resetHolidayCache } from '../../hooks/useHolidayCalendar';
@@ -63,7 +63,7 @@ export default function Holidays() {
 
   return (
     <section className="space-y-5">
-      <div><h2 className="text-lg font-extrabold text-ink-900">Feriados</h2><p className="text-sm text-slate-500">Os prazos das OSs ignoram fins de semana e os feriados abaixo.</p></div>
+      <div><h2 className="text-lg font-extrabold text-slate-900">Feriados</h2><p className="text-sm text-slate-500">Os prazos das OSs ignoram fins de semana e os feriados abaixo.</p></div>
 
       <div className="grid gap-5 lg:grid-cols-2">
         <Card

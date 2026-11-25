@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { Eye, LayoutGrid, List, Pencil, Plus, Trash2 } from 'lucide-react';
+import { Eye, LayoutGrid, List, Pencil, Plus, Trash2 } from '../../components/icons';
 import api, { errMsg } from '../../services/api';
 import { useAuth } from '../../context/AuthContext';
 import { useToast } from '../../context/ToastContext';
@@ -122,7 +122,7 @@ export default function Services() {
                   <p className="font-bold text-slate-800">{s.name}</p>
                   {s.description && <p className="line-clamp-2 text-sm text-slate-500">{s.description}</p>}
                 </div>
-                <p className="whitespace-nowrap text-lg font-extrabold text-orange-600">{brl(s.price)}</p>
+                <p className="whitespace-nowrap text-lg font-extrabold text-blue-700">{brl(s.price)}</p>
               </div>
               <p className="mb-3 mt-2 text-xs text-slate-500">Custo de insumo {brl(s.cost_price)} · margem {marginPct(s.cost_price, s.price).toLocaleString('pt-BR')}%</p>
               <div className="mt-auto flex gap-2 border-t border-slate-100 pt-3">

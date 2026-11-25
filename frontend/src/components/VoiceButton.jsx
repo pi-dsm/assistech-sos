@@ -1,5 +1,5 @@
 import { useRef } from 'react';
-import { Mic, MicOff } from 'lucide-react';
+import { Mic, MicOff } from './icons';
 import { useToast } from '../context/ToastContext';
 import useSpeechRecognition from '../hooks/useSpeechRecognition';
 import { btnDanger, btnGhost, btnSm } from './ui';

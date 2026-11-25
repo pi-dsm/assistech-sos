@@ -1,4 +1,4 @@
-import { CalendarClock, Eye, Pencil, ShieldAlert } from 'lucide-react';
+import { CalendarClock, Eye, Pencil, ShieldAlert } from '../icons';
 import { brl, dateOnly, DEVICE_TYPES, isOverdue } from '../../utils/format';
 import StatusSelect from './StatusSelect';
 
@@ -13,7 +13,7 @@ export default function OrderCard({ order, onOpen, onEdit, onStatusChange, class
       className={`rounded-xl border bg-white p-3.5 shadow-card transition hover:shadow-pop ${overdue ? 'border-red-300' : 'border-slate-200'} ${className}`}
     >
       <div className="mb-2 flex items-center justify-between gap-2">
-        <span className="text-base font-extrabold text-ink-900">#{order.service_order_number}</span>
+        <span className="text-base font-extrabold text-slate-900">#{order.service_order_number}</span>
         <StatusSelect order={order} onChange={onStatusChange} />
       </div>
       {order.is_warranty && (
@@ -32,7 +32,7 @@ export default function OrderCard({ order, onOpen, onEdit, onStatusChange, class
           <CalendarClock size={13} /> {dateOnly(order.estimated_delivery_at)}
           {overdue && ' · atrasada'}
         </span>
-        <span className="font-bold text-orange-600">{order.grand_total_amount > 0 ? brl(order.grand_total_amount) : ''}</span>
+        <span className="font-bold text-blue-700">{order.grand_total_amount > 0 ? brl(order.grand_total_amount) : ''}</span>
       </div>
       {onEdit && (
         <div className="mt-3 flex gap-2 border-t border-slate-100 pt-2.5" onPointerDown={stop} onClick={stop}>

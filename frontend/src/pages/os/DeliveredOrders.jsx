@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { CalendarCheck2, Columns3, Eye, List, RotateCcw, ShieldAlert } from 'lucide-react';
+import { CalendarCheck2, Columns3, Eye, List, RotateCcw, ShieldAlert } from '../../components/icons';
 import api, { errMsg } from '../../services/api';
 import { useToast } from '../../context/ToastContext';
 import usePref from '../../hooks/usePref';
@@ -66,7 +66,7 @@ function DeliveredCard({ order, onOpen, onReopen }) {
   return (
     <article onClick={() => onOpen(order)} className="cursor-pointer rounded-xl border border-slate-200 bg-white p-3.5 shadow-card transition hover:shadow-pop">
       <div className="flex items-center justify-between gap-2">
-        <span className="font-extrabold text-ink-900">#{order.service_order_number}</span>
+        <span className="font-extrabold text-slate-900">#{order.service_order_number}</span>
         {order.is_warranty && <span className="inline-flex items-center gap-1 rounded bg-violet-50 px-1.5 text-[11px] font-semibold text-violet-700"><ShieldAlert size={12} /> Garantia</span>}
       </div>
       <p className="mt-1 truncate text-sm font-semibold">{order.device?.brand} {order.device?.model} <span className="font-normal text-slate-400">· {DEVICE_TYPES[order.device?.device_type]}</span></p>
@@ -192,7 +192,7 @@ export default function DeliveredOrders() {
                 const g = GROUPS[groupOf(o)];
                 return (
                   <tr key={o.id} onClick={() => open(o)} className="cursor-pointer hover:bg-blue-50/40">
-                    <td className="px-3 py-2.5 font-bold text-ink-900">#{o.service_order_number}</td>
+                    <td className="px-3 py-2.5 font-bold text-slate-900">#{o.service_order_number}</td>
                     <td className="px-3 py-2.5">{o.device?.brand} {o.device?.model}</td>
                     <td className="px-3 py-2.5">{o.customer?.name}</td>
                     <td className="max-w-52 truncate px-3 py-2.5 text-slate-500" title={o.reported_issue}>{o.reported_issue}</td>

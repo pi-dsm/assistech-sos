@@ -1,24 +1,76 @@
-@import '@fontsource-variable/inter';
+@import '@fontsource-variable/plus-jakarta-sans';
+@import 'material-symbols/rounded.css';
 @import 'tailwindcss';
 
-/* Tokens de marca. Em Tailwind 4 o tema é declarado em CSS, não em tailwind.config.js */
-@theme {
-  --font-sans: 'Inter Variable', ui-sans-serif, system-ui, sans-serif;
+/* Tema escuro: classe "dark" no <html> (escolhida por cada usuário em Configurações gerais) */
+@custom-variant dark (&:where(.dark, .dark *));
 
-  /* Azul-marinho do menu lateral */
-  --color-ink-950: #0a1330;
-  --color-ink-900: #0f1b45;
-  --color-ink-800: #172a63;
-  --color-ink-700: #213a85;
+/* Design system: neutros slate, azul primário (blue-600), laranja só para alertas.
+   Em Tailwind 4 o tema é declarado em CSS, não em tailwind.config.js */
+@theme {
+  --font-sans: 'Plus Jakarta Sans Variable', ui-sans-serif, system-ui, sans-serif;
+
+  /* Fundo do menu lateral (igual nos dois temas) */
+  --color-ink-950: #020617;
+  --color-ink-900: #0f172a;
+  --color-ink-800: #1e293b;
+  --color-ink-700: #334155;
 
   --shadow-card: 0 1px 2px rgb(15 23 42 / 0.04), 0 1px 3px rgb(15 23 42 / 0.06);
   --shadow-pop: 0 10px 30px -10px rgb(15 23 42 / 0.25);
 }
 
+/* Modo escuro sem reescrever as telas: inverte a escala slate e suaviza os azuis claros.
+   slate-950 fundo, slate-900 superfícies, slate-100 texto (conforme o design system). */
+.dark {
+  color-scheme: dark;
+  --color-slate-50: #020617;
+  --color-slate-100: #0f172a;
+  --color-slate-200: #1e293b;
+  --color-slate-300: #334155;
+  --color-slate-400: #64748b;
+  --color-slate-500: #94a3b8;
+  --color-slate-600: #cbd5e1;
+  --color-slate-700: #e2e8f0;
+  --color-slate-800: #f1f5f9;
+  --color-slate-900: #f8fafc;
+  --color-blue-700: #93c5fd;
+  --color-blue-800: #bfdbfe;
+  --color-blue-900: #dbeafe;
+}
+.dark .bg-white { background-color: #0f172a; }
+/* fundos claros de destaque viram tons escuros (o texto colorido em cima clareia) */
+.dark .bg-blue-50 { background-color: #172554; }
+.dark .bg-blue-100 { background-color: #1e3a8a; }
+.dark .ring-blue-200, .dark .border-blue-200 { --tw-ring-color: #1e40af; border-color: #1e40af; }
+.dark .bg-amber-50, .dark .bg-orange-50 { background-color: #451a03; }
+.dark .bg-emerald-50, .dark .bg-green-50 { background-color: #022c22; }
+.dark .bg-red-50 { background-color: #450a0a; }
+.dark .bg-violet-50 { background-color: #2e1065; }
+.dark .text-amber-700, .dark .text-amber-800, .dark .text-orange-700, .dark .text-orange-800 { color: #fcd34d; }
+.dark .text-emerald-700, .dark .text-emerald-800, .dark .text-green-700, .dark .text-green-800 { color: #6ee7b7; }
+.dark .text-red-700 { color: #fca5a5; }
+.dark .text-violet-800 { color: #c4b5fd; }
+.dark .text-white {
+  color: #fff;
+}
+
+.material-symbols-rounded {
+  display: inline-block;
+  flex-shrink: 0;
+  overflow: hidden;
+  line-height: 1;
+  font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+  user-select: none;
+}
+
 @layer base {
   body {
-    @apply bg-slate-50 text-slate-800 antialiased;
+    @apply bg-slate-50 text-slate-700 text-sm antialiased;
   }
+  h1 { @apply text-3xl font-bold text-slate-900; }
+  h2 { @apply text-2xl font-semibold text-slate-900; }
+  h3 { @apply text-xl font-semibold text-slate-800; }
   button:not(:disabled),
   [role='button']:not(:disabled) {
     cursor: pointer;

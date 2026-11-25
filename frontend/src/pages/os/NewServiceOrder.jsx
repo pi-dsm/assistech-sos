@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { UserCheck } from 'lucide-react';
+import { UserCheck } from '../../components/icons';
 import api, { errMsg } from '../../services/api';
 import { useToast } from '../../context/ToastContext';
 import { DEVICE_TYPES, PASSCODE_KINDS } from '../../utils/format';

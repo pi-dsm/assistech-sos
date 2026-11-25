@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { Barcode, Search, Trash2, UserCheck } from 'lucide-react';
+import { Barcode, Search, Trash2, UserCheck } from '../../components/icons';
 import api, { errMsg } from '../../services/api';
 import { useToast } from '../../context/ToastContext';
 import { brl, round2, METHODS } from '../../utils/format';
@@ -235,10 +235,10 @@ export default function NewSale() {
           <Card>
             <div className="grid gap-3 sm:grid-cols-2">
               <div className="relative">
-                <Barcode size={18} className="absolute left-3 top-1/2 -translate-y-1/2 text-orange-500" />
+                <Barcode size={18} className="absolute left-3 top-1/2 -translate-y-1/2 text-blue-600" />
                 <input
                   ref={scanRef}
-                  className={`${inputCls} border-orange-300 pl-10 font-mono text-base focus:border-orange-500 focus:ring-orange-500/20`}
+                  className={`${inputCls} border-blue-300 pl-10 font-mono text-base focus:border-blue-600 focus:ring-blue-600/20`}
                   placeholder="Código de barras (Enter)"
                   value={code}
                   onChange={(e) => setCode(e.target.value)}
@@ -354,7 +354,7 @@ export default function NewSale() {
                 <span>Desconto (R$)</span>
                 <input className={`${inputCls} w-28 text-right`} type="number" min="0" step="0.01" max={subtotal} value={discount} onChange={(e) => setDiscount(e.target.value)} />
               </div>
-              <div className="flex justify-between border-t border-slate-200 pt-2 text-xl font-extrabold text-ink-900"><span>Total</span><span>{brl(total)}</span></div>
+              <div className="flex justify-between border-t border-slate-200 pt-2 text-xl font-extrabold text-slate-900"><span>Total</span><span>{brl(total)}</span></div>
               <textarea className={`${inputCls} mt-3`} rows={2} placeholder="Observações da venda (opcional)" value={notes} onChange={(e) => setNotes(e.target.value)} />
             </div>
 

@@ -1,4 +1,4 @@
-import { AlertTriangle, X } from 'lucide-react';
+import { AlertTriangle, Search, X } from './icons';
 import { PAYMENT_STATE, STATUS } from '../utils/format';
 
 export const inputCls =
@@ -6,7 +6,7 @@ export const inputCls =
 
 const btn =
   'inline-flex items-center justify-center gap-2 rounded-lg px-4 py-2.5 text-sm font-semibold shadow-card transition focus-visible:outline-2 focus-visible:outline-offset-2 disabled:cursor-not-allowed disabled:opacity-50';
-export const btnPrimary = `${btn} bg-orange-500 text-white hover:bg-orange-600 focus-visible:outline-orange-500`;
+export const btnPrimary = `${btn} bg-blue-600 text-white hover:bg-blue-700 focus-visible:outline-blue-600`;
 export const btnBlue = `${btn} bg-blue-700 text-white hover:bg-blue-800 focus-visible:outline-blue-700`;
 export const btnGhost = `${btn} border border-slate-300 bg-white text-slate-700 hover:bg-slate-100 focus-visible:outline-slate-400`;
 export const btnDanger = `${btn} bg-red-600 text-white hover:bg-red-700 focus-visible:outline-red-600`;
@@ -15,7 +15,7 @@ export const btnSm = 'px-3! py-1.5! text-xs!';
 
 export const Spinner = () => (
   <div className="flex justify-center py-12" role="status" aria-label="Carregando">
-    <div className="h-9 w-9 animate-spin rounded-full border-4 border-blue-100 border-t-orange-500" />
+    <div className="h-9 w-9 animate-spin rounded-full border-4 border-blue-100 border-t-blue-600" />
   </div>
 );
 
@@ -44,7 +44,7 @@ export const Card = ({ title, right, children, className = '' }) => (
 export const PageHeader = ({ title, subtitle, children }) => (
   <div className="flex flex-wrap items-end justify-between gap-3">
     <div>
-      <h1 className="text-2xl font-extrabold tracking-tight text-ink-900">{title}</h1>
+      <h1 className="text-2xl font-extrabold tracking-tight text-slate-900">{title}</h1>
       {subtitle && <p className="mt-0.5 text-sm text-slate-500">{subtitle}</p>}
     </div>
     <div className="flex flex-wrap items-center gap-2">{children}</div>
@@ -73,7 +73,7 @@ export const Info = ({ label, value }) => (
 const SIZES = { md: 'max-w-2xl', lg: 'max-w-3xl', xl: 'max-w-5xl', sm: 'max-w-md' };
 
 export const Modal = ({ title, onClose, children, size = 'md' }) => (
-  <div className="fixed inset-0 z-50 flex items-end justify-center bg-slate-900/50 p-0 backdrop-blur-[2px] sm:items-center sm:p-4" onClick={onClose}>
+  <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/50 p-0 backdrop-blur-[2px] sm:items-center sm:p-4" onClick={onClose}>
     <div
       role="dialog"
       aria-modal="true"
@@ -81,7 +81,7 @@ export const Modal = ({ title, onClose, children, size = 'md' }) => (
       onClick={(e) => e.stopPropagation()}
     >
       <div className="mb-4 flex items-center justify-between gap-3">
-        <h3 className="text-lg font-bold text-ink-900">{title}</h3>
+        <h3 className="text-lg font-bold text-slate-900">{title}</h3>
         <button onClick={onClose} className="rounded-full p-1 text-slate-500 hover:bg-slate-100" aria-label="Fechar"><X size={20} /></button>
       </div>
       {children}
@@ -128,10 +128,7 @@ export const Segmented = ({ options, value, onChange, label, size = 'md' }) => (
 
 export const SearchInput = ({ value, onChange, placeholder = 'Pesquisar…', className = '' }) => (
   <div className={`relative min-w-56 flex-1 ${className}`}>
-    <svg className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-      <circle cx="11" cy="11" r="8" />
-      <path d="m21 21-4.3-4.3" />
-    </svg>
+    <Search size={16} className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
     <input type="search" className={`${inputCls} pl-9`} placeholder={placeholder} value={value} onChange={(e) => onChange(e.target.value)} />
   </div>
 );
@@ -141,7 +138,7 @@ export const Toolbar = ({ children }) => (
   <div className="flex flex-wrap items-center gap-2 rounded-xl border border-slate-200 bg-white p-2.5 shadow-card">{children}</div>
 );
 
-export const Kpi = ({ label, value, icon: Icon, tone = 'text-ink-900', children, accent = 'bg-blue-50 text-blue-700' }) => (
+export const Kpi = ({ label, value, icon: Icon, tone = 'text-slate-900', children, accent = 'bg-blue-50 text-blue-700' }) => (
   <div className="rounded-xl border border-slate-200 bg-white p-4 shadow-card">
     <div className="flex items-start justify-between gap-2">
       <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">{label}</p>

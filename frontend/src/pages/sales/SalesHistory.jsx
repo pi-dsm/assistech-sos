@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { Calculator, Info as InfoIcon, LayoutList, ListOrdered, PlusCircle, Table2 } from 'lucide-react';
+import { Calculator, Info as InfoIcon, LayoutList, ListOrdered, PlusCircle, Table2 } from '../../components/icons';
 import api, { errMsg } from '../../services/api';
 import { useAuth } from '../../context/AuthContext';
 import { useToast } from '../../context/ToastContext';
@@ -149,9 +149,9 @@ export default function SalesHistory() {
 
       {sales && (
         <div className="grid grid-cols-2 gap-2 text-sm sm:grid-cols-4">
-          <p className="rounded-lg bg-white p-3 shadow-card ring-1 ring-slate-200">Vendas<br /><b className="text-lg text-ink-900">{totals.count}</b></p>
-          <p className="rounded-lg bg-white p-3 shadow-card ring-1 ring-slate-200">Valor vendido<br /><b className="text-lg text-ink-900">{brl(totals.revenue)}</b></p>
-          <p className="rounded-lg bg-white p-3 shadow-card ring-1 ring-slate-200">Ticket médio<br /><b className="text-lg text-ink-900">{brl(totals.ticket)}</b></p>
+          <p className="rounded-lg bg-white p-3 shadow-card ring-1 ring-slate-200">Vendas<br /><b className="text-lg text-slate-900">{totals.count}</b></p>
+          <p className="rounded-lg bg-white p-3 shadow-card ring-1 ring-slate-200">Valor vendido<br /><b className="text-lg text-slate-900">{brl(totals.revenue)}</b></p>
+          <p className="rounded-lg bg-white p-3 shadow-card ring-1 ring-slate-200">Ticket médio<br /><b className="text-lg text-slate-900">{brl(totals.ticket)}</b></p>
           {showCosts ? (
             <p className="rounded-lg bg-white p-3 shadow-card ring-1 ring-slate-200">Lucro<br /><b className="text-lg text-emerald-700">{brl(totals.profit)}</b></p>
           ) : (
@@ -190,7 +190,7 @@ export default function SalesHistory() {
                 const qty = s.items.reduce((n, i) => n + i.quantity, 0);
                 return (
                   <tr key={s.id} onClick={() => setOpenSale(s)} className="cursor-pointer hover:bg-blue-50/40">
-                    <td className="px-3 py-2.5 font-extrabold text-ink-900">#{s.sale_number}</td>
+                    <td className="px-3 py-2.5 font-extrabold text-slate-900">#{s.sale_number}</td>
                     <td className="px-3 py-2.5 font-mono text-xs text-slate-500">{s.short_id}</td>
                     <td className="whitespace-nowrap px-3 py-2.5 text-slate-600">{dt(s.created_at)}</td>
                     <td className="max-w-72 truncate px-3 py-2.5" title={s.items.map((i) => `${i.quantity}× ${i.name}`).join(', ')}>
@@ -248,7 +248,7 @@ export default function SalesHistory() {
                 </tr>
               ))}
             </tbody>
-            <tfoot className="bg-slate-50 font-bold text-ink-900">
+            <tfoot className="bg-slate-50 font-bold text-slate-900">
               <tr>
                 <td className="px-3 py-2.5" colSpan={3}>Total · {itemRows.length} linha(s)</td>
                 <td className="px-3 py-2.5 text-right">{itemTotals.qty}</td>
