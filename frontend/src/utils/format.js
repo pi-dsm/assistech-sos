@@ -49,7 +49,7 @@ export const STATUS = {
 export const STATUS_FLOW = ['received', 'in_diagnosis', 'in_repair', 'ready', 'delivered'];
 
 export const METHODS = { pix: 'Pix', cash: 'Dinheiro', credit_card: 'Cartão de crédito', debit_card: 'Cartão de débito' };
-export const ROLES = { admin: 'Administrador', technician: 'Técnico', attendant: 'Atendente' };
+export const ROLES = { owner: 'Dona do sistema', admin: 'Administrador', technician: 'Técnico', attendant: 'Atendente' };
 export const PAYMENT_STATE = {
   paid: { label: 'Pago', cls: 'bg-emerald-50 text-emerald-800 ring-emerald-200' },
   partial: { label: 'Pagamento parcial', cls: 'bg-amber-50 text-amber-800 ring-amber-200' },
@@ -115,3 +115,20 @@ export const saleStatus = (sale) => {
   if (sale.balance_due > 0) return { label: `Pendência ${brl(sale.balance_due)}`, cls: 'bg-amber-50 text-amber-800 ring-amber-200' };
   return { label: 'Concluído', cls: 'bg-emerald-50 text-emerald-800 ring-emerald-200' };
 };
+
+// Há quanto tempo está na loja: "2 d 5 h" | "3 h 10 min" | "8 min"
+export const stayDuration = (d) => {
+  if (!d) return '—';
+  const mins = Math.max(0, Math.floor((Date.now() - new Date(d).getTime()) / 60000));
+  const days = Math.floor(mins / 1440);
+  const hours = Math.floor((mins % 1440) / 60);
+  if (days > 0) return `${days} d ${hours} h`;
+  if (hours > 0) return `${hours} h ${mins % 60} min`;
+  return `${mins} min`;
+};
+
+export const daysSince = (d) => (d ? Math.floor((Date.now() - new Date(d).getTime()) / 86400000) : 0);
+
+export const pctFmt = (v, digits = 1) => `${Number(v || 0).toLocaleString('pt-BR', { maximumFractionDigits: digits })}%`;
+
+export const OPEN_STATUS_LABELS = OPEN_STATUSES.map((s) => [s, STATUS[s].label]);
