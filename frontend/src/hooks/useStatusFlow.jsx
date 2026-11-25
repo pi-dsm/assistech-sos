@@ -46,6 +46,9 @@ export default function useStatusFlow(onDone) {
     }
   };
 
+  // Registrar manutenção sem mudar o status (análise, reparo ou correção depois de pronta)
+  const maintenance = (order) => setFlow({ type: 'ready', order });
+
   const close = () => setFlow(null);
   const done = () => {
     setFlow(null);
@@ -80,5 +83,5 @@ export default function useStatusFlow(onDone) {
     </>
   );
 
-  return { request, modals };
+  return { request, maintenance, modals };
 }

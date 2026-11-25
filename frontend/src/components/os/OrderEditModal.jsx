@@ -10,8 +10,7 @@ import { btnBlue, btnGhost, btnPrimary, btnSm, Field, inputCls, Modal, Notice, P
 const TABS = [
   { key: 'info', label: 'Dispositivo, cliente e OS' },
   { key: 'maintenance', label: 'Manutenção' },
-  { key: 'values', label: 'Valores' },
-  { key: 'payments', label: 'Pagamentos' },
+  { key: 'values', label: 'Valores e pagamentos' },
 ];
 const idOf = (doc) => doc?.id || doc?._id;
 
@@ -181,10 +180,12 @@ export default function OrderEditModal({ id, onClose, onChanged, initialTab = 'i
           <div className="space-y-4">
             {['received', 'in_diagnosis'].includes(order.status) && (
               <>
-                <Notice>O aparelho ainda não está em conserto. Avance o status para registrar a manutenção.</Notice>
+                <Notice>{order.status === 'received' ? 'Inicie a análise para registrar o diagnóstico e o orçamento.' : 'Registre o diagnóstico, as peças e a mão de obra: o cliente vê o orçamento e pode aprovar pelo link.'}</Notice>
                 <div className="flex flex-wrap gap-2">
-                  {order.status === 'received' && (
+                  {order.status === 'received' ? (
                     <button className={btnGhost} onClick={() => flow.request(order, 'in_diagnosis')}><Search size={16} /> Iniciar análise</button>
+                  ) : (
+                    <button className={btnGhost} onClick={() => flow.maintenance(order)}><Wrench size={16} /> Registrar manutenção</button>
                   )}
                   <button className={btnBlue} onClick={() => flow.request(order, 'in_repair')}><Play size={16} /> Iniciar conserto</button>
                 </div>
@@ -192,9 +193,9 @@ export default function OrderEditModal({ id, onClose, onChanged, initialTab = 'i
             )}
             {['in_repair', 'awaiting_part'].includes(order.status) && (
               <>
-                <Notice>Ao concluir, registre as peças usadas (ou marque que nenhuma foi usada) e a mão de obra. A OS passa para <b>Concluído</b>.</Notice>
+                <Notice>Registre a manutenção quantas vezes precisar. Quando terminar, use <b>Salvar e concluir conserto</b> e a OS passa para <b>Concluído</b>.</Notice>
                 <div className="flex flex-wrap gap-2">
-                  <button className={btnPrimary} onClick={() => flow.request(order, 'ready')}><Wrench size={16} /> Registrar manutenção e concluir conserto</button>
+                  <button className={btnPrimary} onClick={() => flow.maintenance(order)}><Wrench size={16} /> Registrar manutenção</button>
                   {order.status === 'in_repair' ? (
                     <button className={btnGhost} onClick={() => flow.request(order, 'awaiting_part')}><Clock size={16} /> Aguardando peça</button>
                   ) : (
@@ -202,6 +203,15 @@ export default function OrderEditModal({ id, onClose, onChanged, initialTab = 'i
                   )}
                 </div>
               </>
+            )}
+            {order.status === 'ready' && (
+              <button className={btnGhost} onClick={() => flow.maintenance(order)}><Wrench size={16} /> Corrigir manutenção</button>
+            )}
+            {order.maintenance_report && (
+              <div className="rounded-lg border border-slate-200 p-3 text-sm">
+                <p className="mb-1 text-xs font-bold uppercase tracking-wide text-slate-500">Relatório da manutenção</p>
+                <p className="whitespace-pre-wrap text-slate-700">{order.maintenance_report}</p>
+              </div>
             )}
             {(order.parts_used.length > 0 || order.no_parts_used) && (
               <div className="overflow-x-auto rounded-lg border border-slate-200">
@@ -256,7 +266,7 @@ export default function OrderEditModal({ id, onClose, onChanged, initialTab = 'i
                   <button className={btnPrimary} onClick={() => flow.request(order, 'delivered')}><PackageCheck size={16} /> Entregar, aplicar desconto e cobrar</button>
                 </>
               ) : ['in_repair', 'awaiting_part'].includes(order.status) ? (
-                <p>Peças e mão de obra são definidas ao concluir o conserto (aba Manutenção).</p>
+                <p>Peças e mão de obra vêm do registro de manutenção (aba Manutenção).</p>
               ) : closed ? (
                 <p>OS finalizada: os valores não podem mais ser alterados.</p>
               ) : (
@@ -266,8 +276,9 @@ export default function OrderEditModal({ id, onClose, onChanged, initialTab = 'i
           </div>
         )}
 
-        {tab === 'payments' && (
-          <div className="space-y-4">
+        {tab === 'values' && (
+          <div className="mt-6 space-y-4 border-t border-slate-100 pt-4">
+            <h4 className="text-xs font-bold uppercase tracking-wide text-slate-500">Pagamentos</h4>
             <div className="flex items-center justify-between">
               <p className="text-sm text-slate-600">Recebido <b>{brl(order.paid_amount)}</b> de <b>{brl(order.grand_total_amount)}</b></p>
               <PaymentBadge state={order.payment_state} />

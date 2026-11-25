@@ -81,6 +81,7 @@ const schema = new Schema(
     status_history: [historySchema],
 
     // Em relação à assitência técnica
+    maintenance_report: { type: String, trim: true }, // relatório técnico do que foi feito
     parts_used: [partSchema],
     no_parts_used: { type: Boolean, default: false },
     labor_amount: { type: Number, min: [0, 'Valor da mão de obra inválido'], default: 0 },

@@ -111,23 +111,24 @@ exports.changeStatus = async (order, status, user) => {
   return order;
 };
 
-// 3) in_repair -> ready: peças e mão de obra obrigatórias (ou "nenhuma peça")
+// 3) Registro da manutenção: relatório, peças (opcionais) e mão de obra.
+//    conclude: false só salva (orçamento ou reparo em andamento); conclude: true (padrão) também marca como pronta.
 exports.markReady = async (order, body, user) => {
-  if (!['in_repair', 'awaiting_part', 'ready'].includes(order.status)) {
-    throw httpError(409, 'Só é possível marcar como pronta uma OS que está em conserto.');
+  const conclude = body.conclude !== false;
+  const allowed = conclude ? ['in_repair', 'awaiting_part', 'ready'] : ['in_diagnosis', 'in_repair', 'awaiting_part', 'ready'];
+  if (!allowed.includes(order.status)) {
+    throw httpError(409, conclude ? 'Só é possível concluir uma OS que está em reparo.' : 'Inicie a análise ou o reparo para registrar a manutenção.');
   }
-  const noParts = !!body.no_parts_used;
-  let parts = Array.isArray(body.parts_used) ? body.parts_used.map((p) => pick(p, PART_FIELDS)) : [];
-  if (!noParts && parts.length === 0) {
-    throw httpError(400, 'Informe as peças utilizadas ou marque "Nenhuma peça foi utilizada".');
-  }
+  let parts = body.no_parts_used ? [] : Array.isArray(body.parts_used) ? body.parts_used.map((p) => pick(p, PART_FIELDS)) : [];
+  if (parts.length) parts = await attachSuppliers(parts);
 
-  if (!noParts) parts = await attachSuppliers(parts);
-
-  order.no_parts_used = noParts;
-  order.parts_used = noParts ? [] : parts;
+  if (body.maintenance_report !== undefined) order.maintenance_report = body.maintenance_report;
+  order.parts_used = parts;
+  order.no_parts_used = conclude && parts.length === 0;
   order.labor_amount = round2(body.labor_amount || 0);
-  if (order.status !== 'ready') {
+  if (!conclude) {
+    order.updated_by = user._id;
+  } else if (order.status !== 'ready') {
     order.ready_at = new Date();
     order.setStatus('ready', user._id);
   } else {
