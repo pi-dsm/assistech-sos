@@ -1,3 +1,4 @@
+// Datas retroativas: gravadas direto na coleção (o Mongoose não deixa alterar created_at, que é imutável).
 // Seed de APRESENTAÇÃO do AssisTech SOS: o superadmin, 3 assinantes e 60 dias de operação fictícia
 // da Compucell (mais 4 meses de histórico resumido para a previsão de receita).
 // ATENÇÃO: apaga todos os dados do banco configurado em MONGODB_URI antes de popular.
@@ -49,7 +50,8 @@ const NOW = new Date();
 const DAY = 86400000;
 const at = (daysAgo, hour = int(9, 17), minute = int(0, 59)) => {
   const d = new Date(NOW.getFullYear(), NOW.getMonth(), NOW.getDate() - daysAgo, hour, minute);
-  return d > NOW ? new Date(NOW.getTime() - int(5, 90) * 60000) : d;
+  const midnight = new Date(NOW.getFullYear(), NOW.getMonth(), NOW.getDate()).getTime();
+  return d > NOW ? new Date(midnight + rand() * (NOW.getTime() - midnight)) : d; // hoje, antes de agora
 };
 const plusDays = (date, days) => new Date(date.getTime() + days * DAY);
 const isSunday = (daysAgo) => at(daysAgo, 12).getDay() === 0;
@@ -57,9 +59,10 @@ const isSunday = (daysAgo) => at(daysAgo, 12).getDay() === 0;
 (async () => {
   await mongoose.connect(process.env.MONGODB_URI);
   console.log('Limpando o banco…');
-  await Promise.all(
-    [User, Customer, Device, Product, StockMovement, Service, ServiceOrder, Sale, Setting, Counter, Supplier, Holiday, CashClosing, Tenant, AuditLog].map((m) => m.deleteMany())
-  );
+  const MODELS = [User, Customer, Device, Product, StockMovement, Service, ServiceOrder, Sale, Setting, Counter, Supplier, Holiday, CashClosing, Tenant, AuditLog];
+  await Promise.all(MODELS.map((m) => m.deleteMany()));
+  // Recria os índices conforme os models: remove os únicos antigos (ex.: nº da OS global) e cria os por assinante
+  await Promise.all(MODELS.map((m) => m.syncIndexes()));
 
   // ── Plataforma: superadmin e assinantes ───────────────────────────────────
   await User.create({ name: 'Anelize Nardelli', email: 'super@assistech.com', password: await argon2.hash('super123'), role: 'superadmin' });
@@ -71,7 +74,7 @@ const isSunday = (daysAgo) => at(daysAgo, 12).getDay() === 0;
     { name: 'Conserta Já Jaú', slug: 'consertaja', plan: 'basic', phone: '(14) 3621-4444', address: 'Av. Brasil, 500 - Jaú - SP', showcase: { headline: 'Seu celular pronto no mesmo dia' } },
     { name: 'Cell Point Bariri', slug: 'cellpoint', plan: 'basic', is_active: false, deactivated_at: new Date(Date.now() - 12 * 86400000) }, // cancelou: aparece no churn
   ]);
-  await Tenant.updateOne({ _id: compucell._id }, { created_at: new Date(Date.now() - 200 * 86400000) }, { timestamps: false });
+  await Tenant.collection.updateOne({ _id: compucell._id }, { $set: { created_at: new Date(Date.now() - 200 * 86400000) } });
 
   // Segunda assistência: poucos dados, só para mostrar o isolamento entre assinantes
   await runAs(consertaja, async () => {
@@ -213,9 +216,9 @@ async function populateCompucell() {
       supplier: p.supplier?._id, cost_price: p.cost, sale_price: p.price, min_stock: p.min,
       stock_quantity: p.end + (soldQty[p.key] || 0),
     });
-    await Product.updateOne({ _id: doc._id }, { created_at: created, updated_at: created }, { timestamps: false });
+    await Product.collection.updateOne({ _id: doc._id }, { $set: { created_at: created, updated_at: created } });
     await StockMovement.create({ product: doc._id, kind: 'initial', quantity: doc.stock_quantity, balance_after: doc.stock_quantity, reason: 'Estoque inicial', created_by: admin._id });
-    await StockMovement.updateMany({ product: doc._id, kind: 'initial' }, { created_at: created }, { timestamps: false });
+    await StockMovement.collection.updateMany({ product: doc._id, kind: 'initial' }, { $set: { created_at: created } });
     products[p.key] = doc;
   }
 
@@ -328,7 +331,7 @@ async function populateCompucell() {
   const saveOrder = async (o) => {
     const order = new ServiceOrder(o.doc);
     await order.save();
-    await ServiceOrder.updateOne({ _id: order._id }, { created_at: o.created, updated_at: o.updated }, { timestamps: false });
+    await ServiceOrder.collection.updateOne({ _id: order._id }, { $set: { created_at: o.created, updated_at: o.updated } });
     return order;
   };
 
@@ -449,7 +452,7 @@ async function populateCompucell() {
     original.status_history.push({ status: 'returned', changed_by: attendant._id, changed_at: created });
     original.status = 'returned';
     await original.save();
-    await ServiceOrder.updateOne({ _id: original._id }, { updated_at: created }, { timestamps: false });
+    await ServiceOrder.collection.updateOne({ _id: original._id }, { $set: { updated_at: created } });
   }
 
   // Retorno cobrado da OS antiga (garantia vencida)
@@ -471,7 +474,9 @@ async function populateCompucell() {
   // ── Vendas (pelo serviço real: baixa estoque e registra movimentações) ─────
   const saleDocs = [];
   for (const plan of salePlan) {
-    const when = plan.daysAgo === 0 ? new Date(NOW.getTime() - int(15, 300) * 60000) : at(plan.daysAgo);
+    // vendas de hoje: horário aleatório entre a meia-noite e agora (nunca cai em ontem)
+    const midnight = new Date(NOW.getFullYear(), NOW.getMonth(), NOW.getDate()).getTime();
+    const when = plan.daysAgo === 0 ? new Date(midnight + rand() * (NOW.getTime() - midnight)) : at(plan.daysAgo);
     const items = plan.items.map((i) =>
       i.product ? { item_type: 'product', product_id: products[i.product]._id, quantity: i.quantity } : { item_type: 'service', service_id: svc[i.service]._id, quantity: i.quantity }
     );
@@ -487,8 +492,8 @@ async function populateCompucell() {
       notes: pending ? 'Cliente vai pagar o restante na próxima semana.' : undefined,
     };
     const sale = await createSale(body, pick([attendant, attendant, admin]));
-    await Sale.updateOne({ _id: sale._id }, { $set: { created_at: when, updated_at: when, 'payments.$[].paid_at': when } }, { timestamps: false });
-    await StockMovement.updateMany({ sale: sale._id }, { created_at: when }, { timestamps: false });
+    await Sale.collection.updateOne({ _id: sale._id }, { $set: { created_at: when, updated_at: when, 'payments.$[].paid_at': when } });
+    await StockMovement.collection.updateMany({ sale: sale._id }, { $set: { created_at: when } });
     saleDocs.push({ id: sale._id, when, total });
   }
 
@@ -498,8 +503,8 @@ async function populateCompucell() {
     const sale = await Sale.findById(refundTarget.id);
     await refund(sale, { restock: true }, admin);
     const when = plusDays(refundTarget.when, 2);
-    await Sale.updateOne({ _id: sale._id, 'payments.payment_status': 'refunded' }, { $set: { 'payments.$.paid_at': when } }, { timestamps: false });
-    await StockMovement.updateMany({ sale: sale._id, kind: 'refund' }, { created_at: when }, { timestamps: false });
+    await Sale.collection.updateOne({ _id: sale._id, 'payments.payment_status': 'refunded' }, { $set: { 'payments.$.paid_at': when } });
+    await StockMovement.collection.updateMany({ sale: sale._id, kind: 'refund' }, { $set: { created_at: when } });
   }
   const pendingSale = await Sale.findOne({ notes: /restante/ }).sort({ created_at: 1 });
   if (pendingSale && pendingSale.created_at < at(5)) {
@@ -551,7 +556,7 @@ async function populateCompucell() {
     const quantity = int(1, 3);
     const payment_method = pick(['pix', 'cash', 'debit_card']);
     const sale = await createSale({ items: [{ item_type: 'service', service_id: service._id, quantity }], payments: [{ amount: round2(service.price * quantity), payment_method }] }, admin);
-    await Sale.updateOne({ _id: sale._id }, { $set: { created_at: when, updated_at: when, 'payments.$[].paid_at': when } }, { timestamps: false });
+    await Sale.collection.updateOne({ _id: sale._id }, { $set: { created_at: when, updated_at: when, 'payments.$[].paid_at': when } });
   }
 
   const [orders, sales] = await Promise.all([ServiceOrder.countDocuments(), Sale.countDocuments()]);
