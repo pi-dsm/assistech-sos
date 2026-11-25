@@ -113,7 +113,7 @@ exports.registerReturn = asyncHandler(async (req, res) => {
 exports.remove = asyncHandler(async (req, res) => {
   const order = await loadOrder(req.params.id);
   if (req.query.hard === 'true') {
-    if (req.user.role !== 'admin') throw httpError(403, 'Apenas administradores podem remover definitivamente');
+    if (!req.user.can('orders.delete')) throw httpError(403, 'Você não tem permissão para remover OSs definitivamente');
     await order.deleteOne();
     return res.json({ message: 'OS removida' });
   }

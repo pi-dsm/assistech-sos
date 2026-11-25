@@ -61,6 +61,11 @@ const schema = new Schema(
     // Retorno em garantia
     origin_order: { type: Schema.Types.ObjectId, ref: 'ServiceOrder', index: true },
     is_warranty: { type: Boolean, default: false },
+    // Retorno: 'warranty' (sem cobrança) ou 'paid' (garantia vencida, cobrado normalmente)
+    return_kind: { type: String, enum: ['warranty', 'paid'] },
+    // Perda registrada na reabertura (peça que falhou, retrabalho...). Entra nas perdas do dashboard.
+    return_loss_amount: { type: Number, min: [0, 'Valor de perda inválido'], default: 0 },
+    return_loss_reason: { type: String, trim: true },
 
     // Obrigatórios na abertura
     reported_issue: { type: String, required: [true, 'Problema relatado é obrigatório'] },

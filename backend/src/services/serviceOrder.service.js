@@ -182,31 +182,44 @@ exports.addPayment = async (order, body, user) => {
   return order;
 };
 
-// 6) Retorno em garantia: original -> returned, nova OS vinculada (is_warranty)
+// 6) Retorno: nova OS vinculada à original.
+//    Na garantia: original -> returned (dados travados) e a nova OS é de garantia (sem cobrança).
+//    Fora da garantia: só com charged=true; a nova OS é cobrada normalmente e a original continua entregue.
+//    Perda (loss_amount/loss_reason) e anotação ficam registradas na nova OS.
 exports.registerReturn = async (original, body, user) => {
-  if (original.status !== 'delivered') throw httpError(409, 'Apenas OS entregues podem retornar em garantia.');
-  if (!original.is_under_warranty) {
-    throw httpError(409, 'A garantia desta OS já expirou. Abra uma nova OS para este atendimento.');
+  if (original.status !== 'delivered') throw httpError(409, 'Apenas OS entregues podem ser reabertas como retorno.');
+  const underWarranty = original.is_under_warranty;
+  if (!underWarranty && !body.charged) {
+    throw httpError(409, 'A garantia desta OS já expirou. Confirme a reabertura como retorno cobrado.');
   }
+  const loss = round2(Number(body.loss_amount) || 0);
+  if (loss < 0) throw httpError(400, 'Valor de perda inválido');
 
-  const warrantyOrder = new ServiceOrder({
+  const label = underWarranty ? 'Retorno em garantia' : 'Retorno cobrado (garantia vencida)';
+  const note = String(body.notes || body.internal_notes || '').trim();
+  const returnOrder = new ServiceOrder({
     ...pick(body, ['reported_issue', 'estimated_budget_at', 'estimated_delivery_at']),
     ...(await resolveDeadlines(body)),
     customer: original.customer,
     device: original.device,
     origin_order: original._id,
-    is_warranty: true,
-    internal_notes: `Retorno em garantia da OS #${original.service_order_number}.${body.internal_notes ? ` ${body.internal_notes}` : ''}`,
+    is_warranty: underWarranty,
+    return_kind: underWarranty ? 'warranty' : 'paid',
+    return_loss_amount: loss,
+    return_loss_reason: loss > 0 ? String(body.loss_reason || 'Não informado').trim() : undefined,
+    internal_notes: `${label} da OS #${original.service_order_number}.${note ? ` ${note}` : ''}`,
     status: 'received',
     status_history: [{ status: 'received', changed_by: user._id }],
     created_by: user._id,
     updated_by: user._id,
   });
-  await warrantyOrder.save(); // valida antes de alterar a original
+  await returnOrder.save(); // valida antes de alterar a original
 
-  original.setStatus('returned', user._id);
-  await original.save();
-  return warrantyOrder;
+  if (underWarranty) {
+    original.setStatus('returned', user._id);
+    await original.save();
+  }
+  return returnOrder;
 };
 
 // 7) Cancelamento

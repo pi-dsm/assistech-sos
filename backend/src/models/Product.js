@@ -3,11 +3,14 @@ const mongoose = require('mongoose');
 const { Schema } = mongoose;
 
 const CATEGORIES = ['accessory', 'stationery', 'keyboard', 'screen_protector', 'lighting', 'other'];
+// Tipo do item no estoque: periférico (balcão), peça (OS ou venda) ou dispositivo (aparelho à venda)
+const KINDS = ['peripheral', 'part', 'device'];
 
 const schema = new Schema(
   {
     name: { type: String, required: [true, 'Nome do produto é obrigatório'], trim: true },
     barcode: { type: String, required: [true, 'Código de barras é obrigatório'], unique: true, trim: true },
+    kind: { type: String, enum: { values: KINDS, message: 'Tipo de produto inválido' }, default: 'peripheral', index: true },
     category: { type: String, enum: { values: CATEGORIES, message: 'Categoria inválida' }, default: 'other' },
     description: { type: String, trim: true },
     supplier: { type: Schema.Types.ObjectId, ref: 'Supplier' },
@@ -36,3 +39,4 @@ schema.set('toJSON', { virtuals: true, versionKey: false });
 const Product = mongoose.model('Product', schema);
 module.exports = Product;
 module.exports.CATEGORIES = CATEGORIES;
+module.exports.KINDS = KINDS;

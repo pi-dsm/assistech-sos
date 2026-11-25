@@ -5,6 +5,7 @@ const { asyncHandler, httpError } = require('../utils/helpers');
 const { round2 } = require('../utils/money');
 const { allocateItems } = require('../utils/saleReports');
 const Product = require('../models/Product');
+const { receivedByMethod, isDay, dayStart } = require('../services/payments.service');
 
 const PERIODS = ['daily', 'weekly', 'monthly'];
 const startOfDay = (d) => new Date(d.getFullYear(), d.getMonth(), d.getDate());
@@ -54,7 +55,7 @@ exports.summary = asyncHandler(async (req, res) => {
   const from = buckets[0].start;
   const to = buckets[buckets.length - 1].end;
 
-  const [osPayments, salePayments, delivered, sales, opened, statusCounts, goals] = await Promise.all([
+  const [osPayments, salePayments, delivered, sales, opened, statusCounts, goals, returnLosses] = await Promise.all([
     ServiceOrder.find({ 'payments.paid_at': { $gte: from } }).select('payments').lean(),
     Sale.find({ 'payments.paid_at': { $gte: from } }).select('payments').lean(),
     ServiceOrder.find({ delivered_at: { $gte: from } }).select('delivered_at profit_amount is_warranty discount_amount').lean(),
@@ -62,6 +63,7 @@ exports.summary = asyncHandler(async (req, res) => {
     ServiceOrder.find({ created_at: { $gte: from } }).select('created_at is_warranty device').populate('device', 'brand model').lean(),
     ServiceOrder.aggregate([{ $group: { _id: '$status', total: { $sum: 1 } } }]),
     getGoals(),
+    ServiceOrder.find({ return_loss_amount: { $gt: 0 }, created_at: { $gte: from } }).select('created_at return_loss_amount').lean(),
   ]);
 
   const rows = buckets.map((b) => ({
@@ -86,6 +88,11 @@ exports.summary = asyncHandler(async (req, res) => {
     rows[i].discounts += o.discount_amount || 0;
     if (o.is_warranty) rows[i].loss += Math.max(0, -o.profit_amount);
     else rows[i].profit += o.profit_amount;
+  });
+  // Perdas registradas ao reabrir uma OS (peça que falhou, retrabalho), na data da reabertura
+  returnLosses.forEach((o) => {
+    const i = at(o.created_at);
+    if (i >= 0) rows[i].loss += o.return_loss_amount;
   });
   sales.forEach((s) => {
     const i = at(s.created_at);
@@ -136,6 +143,17 @@ exports.summary = asyncHandler(async (req, res) => {
     trackers: { brands: topN(brands), models: topN(models), weekdays },
     warranty_returns: warrantyReturns,
   });
+});
+
+// GET /dashboard/payments?from=AAAA-MM-DD&to=AAAA-MM-DD -> recebido por forma de pagamento (vendas + OSs)
+exports.payments = asyncHandler(async (req, res) => {
+  const { from, to } = req.query;
+  if (!isDay(from) || (to && !isDay(to))) throw httpError(400, 'Datas inválidas: use o formato AAAA-MM-DD');
+  const start = dayStart(from);
+  const endDay = dayStart(to || from);
+  const end = new Date(endDay.getFullYear(), endDay.getMonth(), endDay.getDate() + 1);
+  if (end <= start) throw httpError(400, 'Intervalo de datas inválido');
+  res.json({ from, to: to || from, ...(await receivedByMethod(start, end)) });
 });
 
 exports.getGoals = asyncHandler(async (req, res) => res.json(await getGoals(req.query.scope)));
