@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { RotateCcw } from 'lucide-react';
+import { RotateCcw } from '../icons';
 import { btnGhost, btnSm } from '../ui';
 
 const SEGMENT_MS = 450;
@@ -89,7 +89,7 @@ export default function PatternPlayer({ pattern = [], autoPlay = true }) {
         {finger && playing && <circle cx={finger.x} cy={finger.y} r="19" fill="none" stroke="#1d4ed8" strokeWidth="3" />}
       </svg>
       <div className="flex w-48 items-center justify-between gap-2">
-        <span className="font-mono text-sm font-bold text-ink-900">{sequence || '—'}</span>
+        <span className="font-mono text-sm font-bold text-slate-900">{sequence || '—'}</span>
         <button type="button" className={`${btnGhost} ${btnSm}`} onClick={play} disabled={playing || validPattern.length < 2}>
           <RotateCcw size={13} /> Reexibir animação
         </button>

@@ -1,4 +1,4 @@
-import { Plus, Trash2 } from 'lucide-react';
+import { Plus, Trash2 } from './icons';
 import { brl, METHODS, round2 } from '../utils/format';
 import { btnGhost, btnSm, inputCls } from './ui';
 

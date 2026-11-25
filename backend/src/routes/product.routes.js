@@ -1,15 +1,15 @@
 const router = require('express').Router();
 const c = require('../controllers/product.controller');
-const { authenticate, authorize } = require('../middleware/auth');
+const { authenticate, can } = require('../middleware/auth');
 
 router.use(authenticate);
-router.get('/', c.list);
+router.get('/', c.list); // ?kind=peripheral|part|device
 router.get('/barcode/:code', c.getByBarcode); // antes de '/:id'
 router.get('/:id', c.get);
 router.get('/:id/movements', c.movements);
-router.post('/', authorize('admin', 'attendant'), c.create);
-router.put('/:id', authorize('admin', 'attendant'), c.update);
-router.patch('/:id/stock', authorize('admin', 'attendant'), c.adjustStock);
-router.delete('/:id', authorize('admin'), c.remove);
+router.post('/', can('catalog.edit'), c.create);
+router.put('/:id', can('catalog.edit'), c.update);
+router.patch('/:id/stock', can('catalog.edit'), c.adjustStock);
+router.delete('/:id', can('catalog.delete'), c.remove);
 
 module.exports = router;

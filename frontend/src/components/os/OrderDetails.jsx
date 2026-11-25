@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from 'react';
-import { Eye, EyeOff, FileText, RotateCcw, ShieldCheck } from 'lucide-react';
+import { Eye, EyeOff, FileText, RotateCcw, ShieldCheck } from '../icons';
 import api, { errMsg } from '../../services/api';
 import { useAuth } from '../../context/AuthContext';
 import { useToast } from '../../context/ToastContext';
@@ -10,6 +10,7 @@ import DeadlineField, { deadlinePayload, isDeadlineValid, newDeadline } from '..
 import { btnBlue, btnGhost, btnPrimary, btnSm, Card, Field, Info, inputCls, Modal, PaymentBadge, Spinner, StatusBadge } from '../ui';
 import PatternPad from './PatternPad';
 import ReceiptModal from './ReceiptModal';
+import WhatsAppButton from './WhatsAppButton';
 import StatusSelect from './StatusSelect';
 import PatternPlayer from './PatternPlayer';
 import { paymentLabel } from '../../utils/format';
@@ -19,7 +20,8 @@ export default function OrderDetails({ id, onChanged, onOpenOrder }) {
   const toast = useToast();
   const calendar = useHolidayCalendar();
 
-  const { isAdmin } = useAuth();
+  const { can } = useAuth();
+  const showCosts = can('costs.view');
   const [order, setOrder] = useState(null);
   const [notes, setNotes] = useState('');
   const [showPass, setShowPass] = useState(false);
@@ -105,7 +107,7 @@ export default function OrderDetails({ id, onChanged, onOpenOrder }) {
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
           <div className="flex flex-wrap items-center gap-2">
-            <h2 className="text-2xl font-extrabold text-ink-900">OS #{order.service_order_number}</h2>
+            <h2 className="text-2xl font-extrabold text-slate-900">OS #{order.service_order_number}</h2>
             {order.is_warranty && <span className="rounded bg-violet-100 px-2 py-0.5 text-xs font-bold text-violet-700">GARANTIA</span>}
             <StatusSelect order={order} onChange={flow.request} />
           </div>
@@ -114,6 +116,7 @@ export default function OrderDetails({ id, onChanged, onOpenOrder }) {
         <div className="flex flex-wrap gap-2">
           <button className={`${btnGhost} ${btnSm}`} onClick={() => setDoc('receipt')}><FileText size={14} /> Comprovante</button>
           {order.status === 'delivered' && <button className={`${btnGhost} ${btnSm}`} onClick={() => setDoc('warranty')}><ShieldCheck size={14} /> Termo de garantia</button>}
+          <WhatsAppButton order={order} className={`${btnGhost} ${btnSm}`} />
           {order.status === 'delivered' && order.is_under_warranty && (
             <button
               className={`${btnBlue} ${btnSm}`}
@@ -198,7 +201,7 @@ export default function OrderDetails({ id, onChanged, onOpenOrder }) {
           <div className="overflow-x-auto">
             <table className="w-full min-w-[480px] text-left text-sm">
               <thead className="text-xs uppercase text-slate-500">
-                <tr><th className="py-1">Peça</th><th>Fornecedor</th><th>Qtd.</th>{isAdmin && <th>Custo</th>}<th>Venda</th></tr>
+                <tr><th className="py-1">Peça</th><th>Fornecedor</th><th>Qtd.</th>{showCosts && <th>Custo</th>}<th>Venda</th></tr>
               </thead>
               <tbody className="divide-y divide-slate-100">
                 {order.parts_used.map((p) => (
@@ -206,7 +209,7 @@ export default function OrderDetails({ id, onChanged, onOpenOrder }) {
                     <td className="py-1.5">{p.description}{p.warranty_days ? <span className="text-xs text-slate-400"> · gar. {p.warranty_days}d</span> : null}</td>
                     <td>{p.is_own_stock ? 'Próprio' : p.supplier_name}</td>
                     <td>{p.quantity}</td>
-                    {isAdmin && <td>{brl(p.cost_price)}</td>}
+                    {showCosts && <td>{brl(p.cost_price)}</td>}
                     <td>{brl(p.sale_price)}</td>
                   </tr>
                 ))}
@@ -219,7 +222,7 @@ export default function OrderDetails({ id, onChanged, onOpenOrder }) {
           <div className="flex justify-between"><span>Mão de obra</span><span>{brl(order.labor_amount)}</span></div>
           {order.discount_amount > 0 && <div className="flex justify-between text-emerald-700"><span>Desconto</span><span>− {brl(order.discount_amount)}</span></div>}
           <div className="flex justify-between border-t border-slate-200 pt-1 text-base font-bold"><span>Total</span><span>{order.is_warranty ? 'Garantia' : brl(order.grand_total_amount)}</span></div>
-          {isAdmin && (
+          {showCosts && (
             <div className={`flex justify-between text-xs ${order.profit_amount < 0 ? 'font-bold text-red-600' : 'text-slate-500'}`}>
               <span>{order.is_warranty ? 'Prejuízo de garantia' : 'Lucro'}</span>
               <span>{brl(order.is_warranty ? order.warranty_loss_amount : order.profit_amount)}</span>

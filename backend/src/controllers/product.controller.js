@@ -2,13 +2,16 @@ const Product = require('../models/Product');
 const StockMovement = require('../models/StockMovement');
 const { asyncHandler, pick, clean, escapeRegex, parseLimit, httpError } = require('../utils/helpers');
 
-const FIELDS = ['name', 'barcode', 'category', 'description', 'supplier', 'cost_price', 'sale_price', 'min_stock'];
+const FIELDS = ['name', 'barcode', 'kind', 'category', 'description', 'supplier', 'cost_price', 'sale_price', 'min_stock', 'location', 'show_in_showcase'];
 
 exports.list = asyncHandler(async (req, res) => {
-  const { q, category, low_stock, active } = req.query;
+  const { q, kind, category, low_stock, active } = req.query;
   const filter = {};
   if (active !== 'all') filter.is_active = true;
   if (category) filter.category = category;
+  // Produtos antigos (sem o campo) contam como periféricos
+  if (kind === 'peripheral') filter.kind = { $in: ['peripheral', null] };
+  else if (kind) filter.kind = kind;
   if (q) {
     const rx = new RegExp(escapeRegex(String(q).trim()), 'i');
     filter.$or = [{ name: rx }, { barcode: rx }];

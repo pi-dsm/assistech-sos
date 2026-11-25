@@ -3,7 +3,7 @@ import { DndContext, DragOverlay, PointerSensor, useDraggable, useDroppable, use
 import { CLOSED_STATUSES, OPEN_STATUSES, STATUS } from '../../utils/format';
 import OrderCard from './OrderCard';
 
-function Column({ status, orders, onOpen, onStatusChange }) {
+function Column({ status, orders, onOpen, onEdit, onStatusChange }) {
   const { setNodeRef, isOver } = useDroppable({ id: status });
   const s = STATUS[status];
   return (
@@ -17,25 +17,26 @@ function Column({ status, orders, onOpen, onStatusChange }) {
         </span>
         <span className="rounded-full bg-white px-2 text-xs font-bold text-slate-500 ring-1 ring-slate-200">{orders.length}</span>
       </header>
-      <div className="flex max-h-[58vh] flex-col gap-2 overflow-y-auto pr-0.5">
-        {orders.map((o) => <DraggableCard key={o.id} order={o} onOpen={onOpen} onStatusChange={onStatusChange} />)}
+      <div className="flex max-h-[62vh] flex-col gap-2 overflow-y-auto pr-0.5">
+        {orders.map((o) => <DraggableCard key={o.id} order={o} onOpen={onOpen} onEdit={onEdit} onStatusChange={onStatusChange} />)}
         {orders.length === 0 && <p className="py-6 text-center text-xs text-slate-400">Nenhuma OS</p>}
       </div>
     </section>
   );
 }
 
-function DraggableCard({ order, onOpen, onStatusChange }) {
+function DraggableCard({ order, onOpen, onEdit, onStatusChange }) {
   const finished = CLOSED_STATUSES.includes(order.status);
   const { attributes, listeners, setNodeRef, isDragging } = useDraggable({ id: order.id, data: { order }, disabled: finished });
   return (
     <div ref={setNodeRef} {...listeners} {...attributes} className={`${finished ? '' : 'cursor-grab active:cursor-grabbing'} ${isDragging ? 'opacity-30' : ''}`}>
-      <OrderCard order={order} onOpen={onOpen} onStatusChange={onStatusChange} />
+      <OrderCard order={order} onOpen={onOpen} onEdit={onEdit} onStatusChange={onStatusChange} />
     </div>
   );
 }
 
-export default function KanbanView({ orders, onOpen, onStatusChange }) {
+// statuses: colunas exibidas. Na Central de OSs (não entregues) só as abertas.
+export default function KanbanView({ orders, onOpen, onEdit, onStatusChange, statuses = OPEN_STATUSES }) {
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 6 } }));
   const [active, setActive] = useState(null);
   const by = (status) => orders.filter((o) => o.status === status);
@@ -49,16 +50,9 @@ export default function KanbanView({ orders, onOpen, onStatusChange }) {
 
   return (
     <DndContext sensors={sensors} onDragStart={({ active: a }) => setActive(a.data.current.order)} onDragEnd={handleEnd} onDragCancel={() => setActive(null)}>
-      <h2 className="mb-2 text-xs font-bold uppercase tracking-wider text-slate-500">Em andamento</h2>
       <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
-        {OPEN_STATUSES.map((s) => <Column key={s} status={s} orders={by(s)} onOpen={onOpen} onStatusChange={onStatusChange} />)}
+        {statuses.map((s) => <Column key={s} status={s} orders={by(s)} onOpen={onOpen} onEdit={onEdit} onStatusChange={onStatusChange} />)}
       </div>
-
-      <h2 className="mb-2 mt-6 text-xs font-bold uppercase tracking-wider text-slate-500">Concluídas</h2>
-      <div className="grid gap-3 md:grid-cols-3">
-        {CLOSED_STATUSES.map((s) => <Column key={s} status={s} orders={by(s)} onOpen={onOpen} onStatusChange={onStatusChange} />)}
-      </div>
-
       <DragOverlay>
         {active ? <OrderCard order={active} onStatusChange={() => {}} className="rotate-1 shadow-pop" /> : null}
       </DragOverlay>

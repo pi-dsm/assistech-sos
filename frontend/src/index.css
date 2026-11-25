@@ -1,24 +1,77 @@
-@import '@fontsource-variable/inter';
+@import '@fontsource-variable/plus-jakarta-sans';
+@import 'material-symbols/rounded.css';
 @import 'tailwindcss';
 
-/* Tokens de marca. Em Tailwind 4 o tema é declarado em CSS, não em tailwind.config.js */
-@theme {
-  --font-sans: 'Inter Variable', ui-sans-serif, system-ui, sans-serif;
+/* Tema escuro: classe "dark" no <html> (escolhida por cada usuário em Configurações gerais) */
+@custom-variant dark (&:where(.dark, .dark *));
 
-  /* Azul-marinho do menu lateral */
-  --color-ink-950: #0a1330;
-  --color-ink-900: #0f1b45;
-  --color-ink-800: #172a63;
-  --color-ink-700: #213a85;
+/* Design system: neutros slate, azul primário (blue-600), laranja só para alertas.
+   Em Tailwind 4 o tema é declarado em CSS, não em tailwind.config.js */
+@theme {
+  --font-sans: 'Plus Jakarta Sans Variable', ui-sans-serif, system-ui, sans-serif;
+
+  /* Fundo do menu lateral (igual nos dois temas) */
+  --color-ink-950: #020617;
+  --color-ink-900: #0f172a;
+  --color-ink-800: #1e293b;
+  --color-ink-700: #334155;
 
   --shadow-card: 0 1px 2px rgb(15 23 42 / 0.04), 0 1px 3px rgb(15 23 42 / 0.06);
   --shadow-pop: 0 10px 30px -10px rgb(15 23 42 / 0.25);
 }
 
+/* Modo escuro sem reescrever as telas: inverte a escala slate e suaviza os azuis claros.
+   slate-950 fundo, slate-900 superfícies, slate-100 texto (conforme o design system). */
+.dark {
+  color-scheme: dark;
+  --color-slate-50: #020617;
+  --color-slate-100: #0f172a;
+  --color-slate-200: #1e293b;
+  --color-slate-300: #334155;
+  --color-slate-400: #64748b;
+  --color-slate-500: #94a3b8;
+  --color-slate-600: #cbd5e1;
+  --color-slate-700: #e2e8f0;
+  --color-slate-800: #f1f5f9;
+  --color-slate-900: #f8fafc;
+}
+.dark .bg-white { background-color: #0f172a; }
+/* Cores de destaque no escuro: fundos sólidos e pouco saturados, texto claro e borda visível */
+.dark {
+  --color-red-50: #3a2326; --color-red-100: #4a2a2e; --color-red-200: #7a3a3f; --color-red-700: #fca5a5; --color-red-800: #fecaca; --color-red-900: #fee2e2;
+  --color-amber-50: #362d1c; --color-amber-100: #4a3b20; --color-amber-200: #7a6030; --color-amber-700: #fcd34d; --color-amber-800: #fde68a; --color-amber-900: #fef3c7;
+  --color-yellow-50: #36321c; --color-yellow-100: #4a4420; --color-yellow-200: #7a6e30; --color-yellow-700: #fde047; --color-yellow-800: #fef08a; --color-yellow-900: #fef9c3;
+  --color-orange-50: #3a281c; --color-orange-100: #4a3020; --color-orange-200: #7a4c2e; --color-orange-700: #fdba74; --color-orange-800: #fed7aa; --color-orange-900: #ffedd5;
+  --color-blue-50: #1c2a44; --color-blue-100: #22355a; --color-blue-200: #36508a; --color-blue-700: #93c5fd; --color-blue-800: #bfdbfe; --color-blue-900: #dbeafe;
+  --color-emerald-50: #1b3329; --color-emerald-100: #20402f; --color-emerald-200: #2f6a4e; --color-emerald-700: #6ee7b7; --color-emerald-800: #a7f3d0; --color-emerald-900: #d1fae5;
+  --color-green-50: #1d3324; --color-green-100: #22402b; --color-green-200: #327044; --color-green-700: #86efac; --color-green-800: #bbf7d0; --color-green-900: #dcfce7;
+  --color-violet-50: #2c2440; --color-violet-100: #382d52; --color-violet-200: #5b4a8a; --color-violet-700: #c4b5fd; --color-violet-800: #ddd6fe; --color-violet-900: #ede9fe;
+}
+.dark .text-white {
+  color: #fff;
+}
+/* Botões e fundos fortes mantêm o tom escuro original (texto branco em cima) */
+.dark .bg-blue-700, .dark .hover\:bg-blue-700:hover { background-color: #1d4ed8; }
+.dark .hover\:bg-blue-800:hover { background-color: #1e40af; }
+.dark .hover\:bg-red-700:hover { background-color: #b91c1c; }
+.dark .to-blue-800 { --tw-gradient-to: #1e40af; }
+
+.material-symbols-rounded {
+  display: inline-block;
+  flex-shrink: 0;
+  overflow: hidden;
+  line-height: 1;
+  font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+  user-select: none;
+}
+
 @layer base {
   body {
-    @apply bg-slate-50 text-slate-800 antialiased;
+    @apply bg-slate-50 text-slate-700 text-sm antialiased;
   }
+  h1 { @apply text-3xl font-bold text-slate-900; }
+  h2 { @apply text-2xl font-semibold text-slate-900; }
+  h3 { @apply text-xl font-semibold text-slate-800; }
   button:not(:disabled),
   [role='button']:not(:disabled) {
     cursor: pointer;

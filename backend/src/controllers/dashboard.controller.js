@@ -4,6 +4,8 @@ const Setting = require('../models/Setting');
 const { asyncHandler, httpError } = require('../utils/helpers');
 const { round2 } = require('../utils/money');
 const { allocateItems } = require('../utils/saleReports');
+const Product = require('../models/Product');
+const { receivedByMethod, isDay, dayStart } = require('../services/payments.service');
 
 const PERIODS = ['daily', 'weekly', 'monthly'];
 const startOfDay = (d) => new Date(d.getFullYear(), d.getMonth(), d.getDate());
@@ -53,7 +55,7 @@ exports.summary = asyncHandler(async (req, res) => {
   const from = buckets[0].start;
   const to = buckets[buckets.length - 1].end;
 
-  const [osPayments, salePayments, delivered, sales, opened, statusCounts, goals] = await Promise.all([
+  const [osPayments, salePayments, delivered, sales, opened, statusCounts, goals, returnLosses] = await Promise.all([
     ServiceOrder.find({ 'payments.paid_at': { $gte: from } }).select('payments').lean(),
     Sale.find({ 'payments.paid_at': { $gte: from } }).select('payments').lean(),
     ServiceOrder.find({ delivered_at: { $gte: from } }).select('delivered_at profit_amount is_warranty discount_amount').lean(),
@@ -61,6 +63,7 @@ exports.summary = asyncHandler(async (req, res) => {
     ServiceOrder.find({ created_at: { $gte: from } }).select('created_at is_warranty device').populate('device', 'brand model').lean(),
     ServiceOrder.aggregate([{ $group: { _id: '$status', total: { $sum: 1 } } }]),
     getGoals(),
+    ServiceOrder.find({ return_loss_amount: { $gt: 0 }, created_at: { $gte: from } }).select('created_at return_loss_amount').lean(),
   ]);
 
   const rows = buckets.map((b) => ({
@@ -85,6 +88,11 @@ exports.summary = asyncHandler(async (req, res) => {
     rows[i].discounts += o.discount_amount || 0;
     if (o.is_warranty) rows[i].loss += Math.max(0, -o.profit_amount);
     else rows[i].profit += o.profit_amount;
+  });
+  // Perdas registradas ao reabrir uma OS (peça que falhou, retrabalho), na data da reabertura
+  returnLosses.forEach((o) => {
+    const i = at(o.created_at);
+    if (i >= 0) rows[i].loss += o.return_loss_amount;
   });
   sales.forEach((s) => {
     const i = at(s.created_at);
@@ -135,6 +143,17 @@ exports.summary = asyncHandler(async (req, res) => {
     trackers: { brands: topN(brands), models: topN(models), weekdays },
     warranty_returns: warrantyReturns,
   });
+});
+
+// GET /dashboard/payments?from=AAAA-MM-DD&to=AAAA-MM-DD -> recebido por forma de pagamento (vendas + OSs)
+exports.payments = asyncHandler(async (req, res) => {
+  const { from, to } = req.query;
+  if (!isDay(from) || (to && !isDay(to))) throw httpError(400, 'Datas inválidas: use o formato AAAA-MM-DD');
+  const start = dayStart(from);
+  const endDay = dayStart(to || from);
+  const end = new Date(endDay.getFullYear(), endDay.getMonth(), endDay.getDate() + 1);
+  if (end <= start) throw httpError(400, 'Intervalo de datas inválido');
+  res.json({ from, to: to || from, ...(await receivedByMethod(start, end)) });
 });
 
 exports.getGoals = asyncHandler(async (req, res) => res.json(await getGoals(req.query.scope)));
@@ -237,4 +256,81 @@ exports.salesAnalytics = asyncHandler(async (req, res) => {
     top: { products: rank(topProducts), services: rank(topServices) },
     methods: [...methods.values()].sort((a, b) => b.amount - a.amount).map((m) => ({ ...m, amount: round2(m.amount) })),
   });
+});
+
+const cashBetween = (docs, from, to) =>
+  docs.reduce(
+    (total, doc) =>
+      total +
+      doc.payments.reduce((sum, p) => {
+        const at = new Date(p.paid_at);
+        if (at < from || at >= to) return sum;
+        return sum + (p.payment_status === 'paid' ? p.amount : p.payment_status === 'refunded' ? -p.amount : 0);
+      }, 0),
+    0
+  );
+
+exports.overview = asyncHandler(async (req, res) => {
+  const { OPEN_STATUSES } = ServiceOrder;
+  const today = startOfDay(new Date());
+  const tomorrow = addDays(today, 1);
+  const limit30 = addDays(today, -30);
+
+  const [statusCounts, overdue, readyOver30, lowStock, osPay, salePay, salesToday, deliveredToday] = await Promise.all([
+    ServiceOrder.aggregate([{ $match: { status: { $in: OPEN_STATUSES } } }, { $group: { _id: '$status', total: { $sum: 1 } } }]),
+    ServiceOrder.countDocuments({ status: { $in: OPEN_STATUSES }, estimated_delivery_at: { $lt: today } }),
+    ServiceOrder.countDocuments({ status: 'ready', ready_at: { $lt: limit30 } }),
+    Product.countDocuments({ is_active: true, $expr: { $lte: ['$stock_quantity', '$min_stock'] } }),
+    ServiceOrder.find({ 'payments.paid_at': { $gte: today, $lt: tomorrow } }).select('payments').lean(),
+    Sale.find({ 'payments.paid_at': { $gte: today, $lt: tomorrow } }).select('payments').lean(),
+    Sale.countDocuments({ created_at: { $gte: today, $lt: tomorrow } }),
+    ServiceOrder.countDocuments({ delivered_at: { $gte: today, $lt: tomorrow } }),
+  ]);
+
+  const counts = { received: 0, in_diagnosis: 0, in_repair: 0, ready: 0 };
+  statusCounts.forEach((s) => {
+    counts[s._id] = s.total;
+  });
+
+  res.json({
+    counts,
+    open_orders: Object.values(counts).reduce((a, b) => a + b, 0),
+    overdue_orders: overdue, // abertas com previsão de entrega anterior a hoje
+    ready_over_30_days: readyOver30, // risco de abandono (prazo de retirada)
+    low_stock_products: lowStock,
+    today: {
+      revenue: round2(cashBetween(osPay, today, tomorrow) + cashBetween(salePay, today, tomorrow)),
+      sales_count: salesToday,
+      delivered_orders: deliveredToday,
+    },
+  });
+});
+// GET /dashboard/predictive-revenue?months=6
+// Faturamento recebido por mês + previsão dos próximos 3 meses por regressão linear (mínimos quadrados)
+// sobre os meses já fechados. Simples e explicável: tendência = inclinação da reta.
+exports.predictiveRevenue = asyncHandler(async (req, res) => {
+  const months = Math.min(24, Math.max(3, parseInt(req.query.months, 10) || 6));
+  const now = new Date();
+  const monthKey = (d) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+  const keys = Array.from({ length: months }, (_, i) => monthKey(new Date(now.getFullYear(), now.getMonth() - months + 1 + i, 1)));
+  const signed = { $cond: [{ $eq: ['$payments.payment_status', 'paid'] }, '$payments.amount', { $multiply: ['$payments.amount', -1] }] };
+  const pipeline = [
+    { $unwind: '$payments' },
+    { $match: { 'payments.paid_at': { $gte: new Date(now.getFullYear(), now.getMonth() - months + 1, 1) }, 'payments.payment_status': { $in: ['paid', 'refunded'] } } },
+    { $group: { _id: { $dateToString: { format: '%Y-%m', date: '$payments.paid_at', timezone: process.env.TZ || 'America/Sao_Paulo' } }, total: { $sum: signed } } },
+  ];
+  const rows = [...(await Sale.aggregate(pipeline)), ...(await ServiceOrder.aggregate(pipeline))];
+  const history = keys.map((month) => ({ month, total: round2(rows.filter((r) => r._id === month).reduce((s, r) => s + r.total, 0)) }));
+
+  const closed = history.slice(0, -1).map((h) => h.total); // o mês atual ainda está em andamento
+  const n = closed.length;
+  const meanX = (n - 1) / 2;
+  const meanY = closed.reduce((s, y) => s + y, 0) / n;
+  const varX = closed.reduce((s, _, x) => s + (x - meanX) ** 2, 0);
+  const slope = varX ? closed.reduce((s, y, x) => s + (x - meanX) * (y - meanY), 0) / varX : 0;
+  const forecast = [0, 1, 2].map((i) => ({
+    month: monthKey(new Date(now.getFullYear(), now.getMonth() + i, 1)),
+    total: round2(Math.max(0, meanY + slope * (n + i - meanX))),
+  }));
+  res.json({ history, forecast, trend_per_month: round2(slope), method: 'Regressão linear sobre os meses fechados' });
 });

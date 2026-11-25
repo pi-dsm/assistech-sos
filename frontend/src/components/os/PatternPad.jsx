@@ -1,4 +1,4 @@
-import { Eraser } from 'lucide-react';
+import { Eraser } from '../icons';
 
 // Padrão de desbloqueio 3x3. Os pontos são numerados na ordem em que foram tocados.
 export default function PatternPad({ value = [], onChange, readOnly = false }) {
@@ -21,7 +21,7 @@ export default function PatternPad({ value = [], onChange, readOnly = false }) {
               onClick={() => toggle(p)}
               aria-label={`Ponto ${p + 1}`}
               className={`flex h-9 w-9 items-center justify-center rounded-full border-2 text-sm font-bold transition ${
-                selected ? 'border-orange-500 bg-orange-500 text-white' : 'border-slate-300 bg-white text-transparent'
+                selected ? 'border-blue-600 bg-blue-600 text-white' : 'border-slate-300 bg-white text-transparent'
               }`}
             >
               {selected ? order + 1 : ''}

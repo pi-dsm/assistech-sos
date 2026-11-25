@@ -16,7 +16,7 @@ const PART_FIELDS = [
   'cost_price', 'sale_price', 'quantity', 'warranty_days',
 ];
 // Mudanças "rápidas" (sem dados obrigatórios). 'ready' e 'delivered' têm fluxo próprio.
-const QUICK_STATUSES = ['received', 'in_diagnosis', 'in_repair', 'cancelled'];
+const QUICK_STATUSES = ['received', 'in_diagnosis', 'in_repair', 'awaiting_part', 'cancelled'];
 
 const addDays = (date, days) => new Date(date.getTime() + days * 86400000);
 const ensureOpen = (order) => {
@@ -111,23 +111,24 @@ exports.changeStatus = async (order, status, user) => {
   return order;
 };
 
-// 3) in_repair -> ready: peças e mão de obra obrigatórias (ou "nenhuma peça")
+// 3) Registro da manutenção: relatório, peças (opcionais) e mão de obra.
+//    conclude: false só salva (orçamento ou reparo em andamento); conclude: true (padrão) também marca como pronta.
 exports.markReady = async (order, body, user) => {
-  if (!['in_repair', 'ready'].includes(order.status)) {
-    throw httpError(409, 'Só é possível marcar como pronta uma OS que está em conserto.');
+  const conclude = body.conclude !== false;
+  const allowed = conclude ? ['in_repair', 'awaiting_part', 'ready'] : ['in_diagnosis', 'in_repair', 'awaiting_part', 'ready'];
+  if (!allowed.includes(order.status)) {
+    throw httpError(409, conclude ? 'Só é possível concluir uma OS que está em reparo.' : 'Inicie a análise ou o reparo para registrar a manutenção.');
   }
-  const noParts = !!body.no_parts_used;
-  let parts = Array.isArray(body.parts_used) ? body.parts_used.map((p) => pick(p, PART_FIELDS)) : [];
-  if (!noParts && parts.length === 0) {
-    throw httpError(400, 'Informe as peças utilizadas ou marque "Nenhuma peça foi utilizada".');
-  }
+  let parts = body.no_parts_used ? [] : Array.isArray(body.parts_used) ? body.parts_used.map((p) => pick(p, PART_FIELDS)) : [];
+  if (parts.length) parts = await attachSuppliers(parts);
 
-  if (!noParts) parts = await attachSuppliers(parts);
-
-  order.no_parts_used = noParts;
-  order.parts_used = noParts ? [] : parts;
+  if (body.maintenance_report !== undefined) order.maintenance_report = body.maintenance_report;
+  order.parts_used = parts;
+  order.no_parts_used = conclude && parts.length === 0;
   order.labor_amount = round2(body.labor_amount || 0);
-  if (order.status !== 'ready') {
+  if (!conclude) {
+    order.updated_by = user._id;
+  } else if (order.status !== 'ready') {
     order.ready_at = new Date();
     order.setStatus('ready', user._id);
   } else {
@@ -182,31 +183,44 @@ exports.addPayment = async (order, body, user) => {
   return order;
 };
 
-// 6) Retorno em garantia: original -> returned, nova OS vinculada (is_warranty)
+// 6) Retorno: nova OS vinculada à original.
+//    Na garantia: original -> returned (dados travados) e a nova OS é de garantia (sem cobrança).
+//    Fora da garantia: só com charged=true; a nova OS é cobrada normalmente e a original continua entregue.
+//    Perda (loss_amount/loss_reason) e anotação ficam registradas na nova OS.
 exports.registerReturn = async (original, body, user) => {
-  if (original.status !== 'delivered') throw httpError(409, 'Apenas OS entregues podem retornar em garantia.');
-  if (!original.is_under_warranty) {
-    throw httpError(409, 'A garantia desta OS já expirou. Abra uma nova OS para este atendimento.');
+  if (original.status !== 'delivered') throw httpError(409, 'Apenas OS entregues podem ser reabertas como retorno.');
+  const underWarranty = original.is_under_warranty;
+  if (!underWarranty && !body.charged) {
+    throw httpError(409, 'A garantia desta OS já expirou. Confirme a reabertura como retorno cobrado.');
   }
+  const loss = round2(Number(body.loss_amount) || 0);
+  if (loss < 0) throw httpError(400, 'Valor de perda inválido');
 
-  const warrantyOrder = new ServiceOrder({
+  const label = underWarranty ? 'Retorno em garantia' : 'Retorno cobrado (garantia vencida)';
+  const note = String(body.notes || body.internal_notes || '').trim();
+  const returnOrder = new ServiceOrder({
     ...pick(body, ['reported_issue', 'estimated_budget_at', 'estimated_delivery_at']),
     ...(await resolveDeadlines(body)),
     customer: original.customer,
     device: original.device,
     origin_order: original._id,
-    is_warranty: true,
-    internal_notes: `Retorno em garantia da OS #${original.service_order_number}.${body.internal_notes ? ` ${body.internal_notes}` : ''}`,
+    is_warranty: underWarranty,
+    return_kind: underWarranty ? 'warranty' : 'paid',
+    return_loss_amount: loss,
+    return_loss_reason: loss > 0 ? String(body.loss_reason || 'Não informado').trim() : undefined,
+    internal_notes: `${label} da OS #${original.service_order_number}.${note ? ` ${note}` : ''}`,
     status: 'received',
     status_history: [{ status: 'received', changed_by: user._id }],
     created_by: user._id,
     updated_by: user._id,
   });
-  await warrantyOrder.save(); // valida antes de alterar a original
+  await returnOrder.save(); // valida antes de alterar a original
 
-  original.setStatus('returned', user._id);
-  await original.save();
-  return warrantyOrder;
+  if (underWarranty) {
+    original.setStatus('returned', user._id);
+    await original.save();
+  }
+  return returnOrder;
 };
 
 // 7) Cancelamento

@@ -1,4 +1,5 @@
 const mongoose = require('mongoose');
+const { tenantPlugin } = require('../config/tenant');
 const { nextSequence } = require('./Counter');
 const { paymentSchema } = require('./schemas/payment.schema');
 const { round2, formatBRL } = require('../utils/money');
@@ -28,7 +29,7 @@ const itemSchema = new Schema(
 
 const schema = new Schema(
   {
-    sale_number: { type: Number, unique: true },
+    sale_number: { type: Number },
     customer: { type: Schema.Types.ObjectId, ref: 'Customer' }, // opcional; obrigatório se houver saldo pendente
     items: { type: [itemSchema], validate: [(v) => v.length > 0, 'A venda precisa ter ao menos 1 item'] },
     subtotal_amount: { type: Number, default: 0 },
@@ -48,6 +49,8 @@ const schema = new Schema(
 schema.index({ created_at: -1 });
 
 // lucro = valor da venda - custo (proporcionalmente reduzido por estornos)
+schema.plugin(tenantPlugin);
+schema.index({ tenant: 1, sale_number: 1 }, { unique: true });
 schema.methods.recalculate = function () {
   const sell = this.items.reduce((s, i) => s + i.unit_price * i.quantity, 0);
   const cost = this.items.reduce((s, i) => s + (i.unit_cost || 0) * i.quantity, 0);

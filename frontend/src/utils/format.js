@@ -34,22 +34,23 @@ export const todayLong = () => {
   return s.charAt(0).toUpperCase() + s.slice(1);
 };
 
-export const OPEN_STATUSES = ['received', 'in_diagnosis', 'in_repair', 'ready'];
+export const OPEN_STATUSES = ['received', 'in_diagnosis', 'in_repair', 'awaiting_part', 'ready'];
 export const CLOSED_STATUSES = ['delivered', 'cancelled', 'returned'];
 
 export const STATUS = {
-  received: { label: 'Recebido', cls: 'bg-slate-100 text-slate-700 ring-slate-200', bar: 'bg-slate-400' },
-  in_diagnosis: { label: 'Em análise', cls: 'bg-amber-50 text-amber-800 ring-amber-200', bar: 'bg-amber-400' },
-  in_repair: { label: 'Em conserto', cls: 'bg-blue-50 text-blue-800 ring-blue-200', bar: 'bg-blue-500' },
-  ready: { label: 'Pronto p/ retirada', cls: 'bg-green-50 text-green-800 ring-green-200', bar: 'bg-green-500' },
+  received: { label: 'Aguardando análise', cls: 'bg-slate-100 text-slate-700 ring-slate-200', bar: 'bg-slate-400' },
+  in_diagnosis: { label: 'Orçamento pendente', cls: 'bg-amber-50 text-amber-800 ring-amber-200', bar: 'bg-amber-400' },
+  in_repair: { label: 'Em reparo', cls: 'bg-blue-50 text-blue-800 ring-blue-200', bar: 'bg-blue-500' },
+  awaiting_part: { label: 'Aguardando peça', cls: 'bg-orange-50 text-orange-800 ring-orange-200', bar: 'bg-orange-500' },
+  ready: { label: 'Concluído', cls: 'bg-green-50 text-green-800 ring-green-200', bar: 'bg-green-500' },
   delivered: { label: 'Entregue', cls: 'bg-emerald-50 text-emerald-800 ring-emerald-200', bar: 'bg-emerald-600' },
   cancelled: { label: 'Cancelada', cls: 'bg-red-50 text-red-700 ring-red-200', bar: 'bg-red-500' },
   returned: { label: 'Retornou (garantia)', cls: 'bg-violet-50 text-violet-800 ring-violet-200', bar: 'bg-violet-500' },
 };
-export const STATUS_FLOW = ['received', 'in_diagnosis', 'in_repair', 'ready', 'delivered'];
+export const STATUS_FLOW = ['received', 'in_diagnosis', 'in_repair', 'awaiting_part', 'ready', 'delivered'];
 
 export const METHODS = { pix: 'Pix', cash: 'Dinheiro', credit_card: 'Cartão de crédito', debit_card: 'Cartão de débito' };
-export const ROLES = { admin: 'Administrador', technician: 'Técnico', attendant: 'Atendente' };
+export const ROLES = { superadmin: 'SuperAdmin', admin: 'Administrador', user: 'Usuário' };
 export const PAYMENT_STATE = {
   paid: { label: 'Pago', cls: 'bg-emerald-50 text-emerald-800 ring-emerald-200' },
   partial: { label: 'Pagamento parcial', cls: 'bg-amber-50 text-amber-800 ring-amber-200' },
@@ -115,3 +116,20 @@ export const saleStatus = (sale) => {
   if (sale.balance_due > 0) return { label: `Pendência ${brl(sale.balance_due)}`, cls: 'bg-amber-50 text-amber-800 ring-amber-200' };
   return { label: 'Concluído', cls: 'bg-emerald-50 text-emerald-800 ring-emerald-200' };
 };
+
+// Há quanto tempo está na loja: "2 d 5 h" | "3 h 10 min" | "8 min"
+export const stayDuration = (d) => {
+  if (!d) return '—';
+  const mins = Math.max(0, Math.floor((Date.now() - new Date(d).getTime()) / 60000));
+  const days = Math.floor(mins / 1440);
+  const hours = Math.floor((mins % 1440) / 60);
+  if (days > 0) return `${days} d ${hours} h`;
+  if (hours > 0) return `${hours} h ${mins % 60} min`;
+  return `${mins} min`;
+};
+
+export const daysSince = (d) => (d ? Math.floor((Date.now() - new Date(d).getTime()) / 86400000) : 0);
+
+export const pctFmt = (v, digits = 1) => `${Number(v || 0).toLocaleString('pt-BR', { maximumFractionDigits: digits })}%`;
+
+export const OPEN_STATUS_LABELS = OPEN_STATUSES.map((s) => [s, STATUS[s].label]);

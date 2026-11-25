@@ -1,4 +1,4 @@
-import { TriangleAlert } from 'lucide-react';
+import { TriangleAlert } from './icons';
 import { dateInputToISO, isoToDateInput } from '../utils/format';
 import { inputCls } from './ui';
 

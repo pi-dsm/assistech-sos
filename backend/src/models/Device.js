@@ -1,4 +1,5 @@
 const mongoose = require('mongoose');
+const { tenantPlugin } = require('../config/tenant');
 
 const { Schema } = mongoose;
 
@@ -50,6 +51,7 @@ schema.pre('validate', function (next) {
   next();
 });
 
+schema.plugin(tenantPlugin);
 schema.set('toJSON', { virtuals: true, versionKey: false });
 
 const Device = mongoose.model('Device', schema);

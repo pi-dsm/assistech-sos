@@ -7,6 +7,8 @@ const rateLimit = require('express-rate-limit');
 const swaggerUi = require('swagger-ui-express');
 const connectDB = require('./config/db');
 const swaggerSpec = require('./config/swagger');
+const AuditLog = require('./models/AuditLog');
+const { authenticate, can } = require('./middleware/auth');
 
 const app = express();
 app.use(helmet({ contentSecurityPolicy: false })); // API pura; o Swagger UI usa scripts inline
@@ -19,6 +21,24 @@ const loginLimiter = rateLimit({
   standardHeaders: true,
   legacyHeaders: false,
   message: { message: 'Muitas tentativas de login. Tente novamente em alguns minutos.' },
+});
+
+// Auditoria: toda alteração bem-sucedida fica registrada (quem, o quê, quando). Senhas nunca são gravadas.
+const safeBody = (body = {}) => {
+  const copy = JSON.parse(JSON.stringify(body, (k, v) => (/password|passcode/i.test(k) ? '***' : v)) || '{}');
+  return JSON.stringify(copy).length > 4000 ? { resumo: 'conteúdo grande omitido' } : copy;
+};
+app.use((req, res, next) => {
+  if (req.method === 'GET') return next();
+  res.on('finish', () => {
+    if (!req.user || res.statusCode >= 400) return;
+    AuditLog.create({
+      tenant: req.user.tenant?._id || req.user.tenant, user: req.user._id, user_name: req.user.name,
+      method: req.method, route: (req.baseUrl || '') + (req.route?.path || ''), path: req.originalUrl,
+      entity_id: req.params?.id || req.params?.number, body: safeBody(req.body), status: res.statusCode,
+    }).catch((err) => console.error('auditoria:', err.message));
+  });
+  next();
 });
 
 app.get('/health', (req, res) => res.json({ status: 'ok' }));
@@ -36,6 +56,16 @@ app.use('/api/v1/products', require('./routes/product.routes'));
 app.use('/api/v1/services', require('./routes/service.routes'));
 app.use('/api/v1/holidays', require('./routes/holiday.routes'));
 app.use('/api/v1/suppliers', require('./routes/supplier.routes'));
+app.use('/api/v1/cash-closings', require('./routes/cash.routes'));
+app.use('/api/v1/super', require('./routes/super.routes'));
+app.use('/api/v1/tenant', require('./routes/tenant.routes'));
+
+// Nomes de rota da documentação do projeto (apelidos das rotas acima)
+app.use('/api/v1/os', require('./routes/serviceOrder.routes'));
+app.use('/api/v1/inventory', require('./routes/product.routes'));
+app.use('/api/v1/cash-register', require('./routes/cash.routes'));
+app.post('/api/v1/pdv/checkout', authenticate, can('sales.create'), require('./controllers/sale.controller').create);
+app.get('/api/v1/analytics/predictive-revenue', authenticate, can('metrics.view'), require('./controllers/dashboard.controller').predictiveRevenue);
 
 app.use((req, res) => res.status(404).json({ message: 'Rota não encontrada' }));
 

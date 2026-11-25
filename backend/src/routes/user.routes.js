@@ -3,6 +3,7 @@ const c = require('../controllers/user.controller');
 const { authenticate, authorize } = require('../middleware/auth');
 
 router.use(authenticate, authorize('admin'));
+router.get('/permissions', c.permissions); // antes de '/:id'
 router.post('/', c.create);
 router.get('/', c.list);
 router.get('/:id', c.get);

@@ -1,9 +1,12 @@
-// Dados da empresa usados nos comprovantes (PDF). Lidos do .env.
+// Dados da empresa nos comprovantes: vêm do assinante da requisição atual.
+const { currentTenantDoc } = require('./tenant');
+
+const t = () => currentTenantDoc() || {};
 module.exports = {
-  name: process.env.COMPANY_NAME || 'Compucell Tecnologias',
-  document: process.env.COMPANY_DOCUMENT || '',
-  phone: process.env.COMPANY_PHONE || '',
-  address: process.env.COMPANY_ADDRESS || '',
-  defaultWarrantyDays: Number(process.env.DEFAULT_WARRANTY_DAYS) || 90,
+  get name() { return t().name || 'AssisTech SOS'; },
+  get document() { return t().document || ''; },
+  get phone() { return t().phone || ''; },
+  get address() { return t().address || ''; },
+  get defaultWarrantyDays() { return t().warranty_days ?? 90; },
   abandonmentDays: 30,
 };

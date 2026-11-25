@@ -1,5 +1,5 @@
 import { createContext, useContext, useMemo, useState } from 'react';
-import { CheckCircle2, XCircle } from 'lucide-react';
+import { CheckCircle2, XCircle } from '../components/icons';
 
 const ToastCtx = createContext(null);
 export const useToast = () => useContext(ToastCtx);

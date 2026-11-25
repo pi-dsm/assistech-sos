@@ -1,12 +1,13 @@
 const router = require('express').Router();
 const c = require('../controllers/supplier.controller');
-const { authenticate, authorize } = require('../middleware/auth');
+const { authenticate, can } = require('../middleware/auth');
 
 router.use(authenticate);
 router.get('/', c.list);
+router.post('/purchase-order', can('catalog.edit'), c.purchaseOrder); // antes de '/:id'
 router.get('/:id', c.get);
-router.post('/', authorize('admin', 'attendant'), c.create);
-router.put('/:id', authorize('admin', 'attendant'), c.update);
-router.patch('/:id/status', authorize('admin', 'attendant'), c.setStatus);
+router.post('/', can('suppliers.edit'), c.create);
+router.put('/:id', can('suppliers.edit'), c.update);
+router.patch('/:id/status', can('suppliers.edit'), c.setStatus);
 
 module.exports = router;

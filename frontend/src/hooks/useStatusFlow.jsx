@@ -32,7 +32,7 @@ export default function useStatusFlow(onDone) {
     if (status === order.status) return;
     switch (status) {
       case 'ready':
-        if (order.status !== 'in_repair') return toast.error('Para marcar como pronta, a OS precisa estar em conserto.');
+        if (!['in_repair', 'awaiting_part'].includes(order.status)) return toast.error('Para marcar como pronta, a OS precisa estar em conserto.');
         return setFlow({ type: 'ready', order });
       case 'delivered':
         if (order.status !== 'ready') return toast.error('Só é possível entregar uma OS que está pronta.');
@@ -45,6 +45,9 @@ export default function useStatusFlow(onDone) {
         return patchStatus(order, status);
     }
   };
+
+  // Registrar manutenção sem mudar o status (análise, reparo ou correção depois de pronta)
+  const maintenance = (order) => setFlow({ type: 'ready', order });
 
   const close = () => setFlow(null);
   const done = () => {
@@ -80,5 +83,5 @@ export default function useStatusFlow(onDone) {
     </>
   );
 
-  return { request, modals };
+  return { request, maintenance, modals };
 }

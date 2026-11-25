@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { Download, ExternalLink, Printer } from 'lucide-react';
+import { Download, ExternalLink, Printer } from '../icons';
 import api from '../../services/api';
 import { useToast } from '../../context/ToastContext';
 import { btnGhost, btnPrimary, Modal, Spinner } from '../ui';
