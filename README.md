@@ -4,7 +4,7 @@
 
 ## Apresentação
 
-- **Slides da apresentação:** [inserir o link aqui](#) <!-- troque o # pelo link dos slides -->
+- **Slides da apresentação:** [AssisTech SOS](https://docs.google.com/presentation/d/1gcpLf3KKADmJqK0ns9H1NHq6KpQAXGVOtW80Oslee4M/edit?usp=sharing)
 - **Vitrine de exemplo (após rodar o seed):** `http://localhost:5173/loja/compucell`
 - **Documentação da API (Swagger):** `http://localhost:3333/api-docs`
 
