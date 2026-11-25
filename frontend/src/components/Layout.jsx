@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { Link, NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom';
-import { ChevronDown, ChevronRight, ExternalLink, LogOut, Menu, Wrench, X } from 'lucide-react';
+import { ChevronDown, ChevronRight, ExternalLink, Menu, Wrench, X } from './icons';
 import { useAuth } from '../context/AuthContext';
 import { crumbsFor, navFor } from '../config/navigation';
 import { ROLES } from '../utils/format';
@@ -11,21 +11,21 @@ const OPEN_KEY = 'sidebar_open_groups';
 export function Logo({ dark = true, size = 'md' }) {
   const box = size === 'lg' ? 'h-11 w-11' : 'h-8 w-8';
   return (
-    <span className={`flex items-center gap-2 font-extrabold tracking-tight ${size === 'lg' ? 'text-2xl' : 'text-xl'} ${dark ? 'text-white' : 'text-ink-900'}`}>
-      <span className={`grid ${box} place-items-center rounded-lg bg-orange-500 text-white`}><Wrench size={size === 'lg' ? 22 : 18} /></span>
+    <span className={`flex items-center gap-2 font-extrabold tracking-tight ${size === 'lg' ? 'text-2xl' : 'text-xl'} ${dark ? 'text-white' : 'text-slate-900'}`}>
+      <span className={`grid ${box} place-items-center rounded-lg bg-blue-600 text-white`}><Wrench size={size === 'lg' ? 22 : 18} /></span>
       <span>
-        Compu<span className={dark ? 'text-orange-400' : 'text-orange-500'}>Cell</span>
+        AssisTech <span className={dark ? 'text-blue-400' : 'text-blue-600'}>SOS</span>
       </span>
     </span>
   );
 }
 
 function Sidebar({ onNavigate }) {
-  const { user, logout, can } = useAuth();
+  const { user, tenant, logout, can, isSuper } = useAuth();
   const { pathname } = useLocation();
   const navigate = useNavigate();
-  const groups = navFor(can);
-  const hasAdminGroup = groups.some((g) => g.key === 'admin');
+  const groups = navFor(can, isSuper);
+  const home = isSuper ? '/super' : '/app';
 
   // Grupos abertos: lembrados no navegador; o grupo da tela atual sempre abre
   const [open, setOpen] = useState(() => {
@@ -49,27 +49,35 @@ function Sidebar({ onNavigate }) {
 
   const linkCls = ({ isActive }) =>
     `flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition ${
-      isActive ? 'bg-orange-500 text-white shadow-card' : 'text-blue-100/80 hover:bg-ink-800 hover:text-white'
+      isActive ? 'bg-blue-600 text-white shadow-card' : 'text-white/75 hover:bg-ink-800 hover:text-white'
     }`;
 
   return (
     <>
       <div className="px-5 pb-4 pt-5">
-        <Link to="/app" onClick={onNavigate} aria-label="Ir para a tela inicial"><Logo /></Link>
-        <p className="mt-1 pl-10 text-[11px] font-medium uppercase tracking-wider text-blue-200/50">Assistência técnica</p>
+        <Link to={home} onClick={onNavigate} aria-label="Ir para a tela inicial"><Logo /></Link>
+        <p className="mt-1 truncate pl-10 text-[11px] font-medium uppercase tracking-wider text-white/50">
+          {isSuper ? 'Gestão da plataforma' : tenant?.name || 'Assistência técnica'}
+        </p>
       </div>
 
       <nav className="flex flex-1 flex-col gap-1 overflow-y-auto px-3 pb-3" aria-label="Menu principal">
         {groups.map((g) => {
-          if (!g.children) {
-            const Icon = g.icon;
+          const Icon = g.icon;
+          if (g.action === 'logout') {
             return (
-              <NavLink key={g.key} to={g.to} end={g.end} onClick={onNavigate} className={(s) => `${linkCls(s)} mb-2 py-2.5`}>
+              <button key="logout" type="button" onClick={handleLogout} className="mt-2 flex items-center gap-3 rounded-lg px-3 py-2 text-left text-sm font-medium text-red-300 transition hover:bg-red-500/15 hover:text-white">
+                <Icon size={18} /> {g.label}
+              </button>
+            );
+          }
+          if (!g.children) {
+            return (
+              <NavLink key={g.key} to={g.to} end={g.end} onClick={onNavigate} className={(s) => `${linkCls(s)} py-2.5`}>
                 <Icon size={18} /> {g.label}
               </NavLink>
             );
           }
-          const Icon = g.icon;
           const expanded = open.includes(g.key);
           const active = pathname.startsWith(g.base);
           return (
@@ -79,26 +87,20 @@ function Sidebar({ onNavigate }) {
                 onClick={() => toggle(g.key)}
                 aria-expanded={expanded}
                 className={`flex w-full items-center gap-3 rounded-lg px-3 py-2 text-left text-[13px] font-bold uppercase tracking-wide transition hover:bg-ink-800 ${
-                  active ? 'text-white' : 'text-blue-200/70'
+                  active ? 'text-white' : 'text-white/50'
                 }`}
               >
-                <Icon size={17} className={active ? 'text-orange-400' : ''} />
+                <Icon size={17} className={active ? 'text-blue-400' : ''} />
                 <span className="flex-1">{g.label}</span>
                 {expanded ? <ChevronDown size={16} /> : <ChevronRight size={16} />}
               </button>
               {expanded && (
                 <div className="ml-[22px] mt-1 flex flex-col gap-0.5 border-l border-white/10 pl-3">
-                  {g.children.map((c) =>
-                    c.action === 'logout' ? (
-                      <button key="logout" type="button" onClick={handleLogout} className="flex items-center gap-3 rounded-lg px-3 py-2 text-left text-sm font-medium text-red-200/90 transition hover:bg-red-500/15 hover:text-white">
-                        <c.icon size={16} /> {c.label}
-                      </button>
-                    ) : (
-                      <NavLink key={c.to} to={c.to} onClick={onNavigate} className={linkCls}>
-                        <c.icon size={16} /> {c.label}
-                      </NavLink>
-                    )
-                  )}
+                  {g.children.map((c) => (
+                    <NavLink key={c.to} to={c.to} onClick={onNavigate} className={linkCls}>
+                      <c.icon size={16} /> {c.label}
+                    </NavLink>
+                  ))}
                 </div>
               )}
             </div>
@@ -113,17 +115,14 @@ function Sidebar({ onNavigate }) {
           </span>
           <div className="min-w-0 flex-1">
             <p className="truncate text-sm font-semibold text-white">{user?.name}</p>
-            <p className="text-xs text-blue-200/60">{ROLES[user?.role]}</p>
+            <p className="text-xs text-white/50">{ROLES[user?.role]}</p>
           </div>
-          {!hasAdminGroup && (
-            <button onClick={handleLogout} className="rounded-lg p-2 text-blue-100/80 transition hover:bg-ink-800 hover:text-white" aria-label="Sair" title="Sair">
-              <LogOut size={18} />
-            </button>
-          )}
         </div>
-        <a href="/consulta" target="_blank" rel="noreferrer" className="mt-3 flex items-center gap-1.5 text-xs font-medium text-blue-200/60 hover:text-white">
-          <ExternalLink size={12} /> Consulta pública de OS
-        </a>
+        {tenant?.slug && (
+          <a href={`/loja/${tenant.slug}`} target="_blank" rel="noreferrer" className="mt-3 flex items-center gap-1.5 text-xs font-medium text-white/50 hover:text-white">
+            <ExternalLink size={12} /> Vitrine e consulta pública de OS
+          </a>
+        )}
       </div>
     </>
   );
@@ -132,6 +131,7 @@ function Sidebar({ onNavigate }) {
 export default function Layout() {
   const [drawer, setDrawer] = useState(false);
   const { pathname } = useLocation();
+  const { isSuper } = useAuth();
   const crumbs = crumbsFor(pathname);
 
   useEffect(() => setDrawer(false), [pathname]);
@@ -143,13 +143,13 @@ export default function Layout() {
       </aside>
 
       <header className="sticky top-0 z-40 flex items-center justify-between bg-ink-900 px-4 py-3 md:hidden">
-        <Link to="/app"><Logo /></Link>
+        <Link to={isSuper ? '/super' : '/app'}><Logo /></Link>
         <button onClick={() => setDrawer(true)} className="rounded-lg p-1.5 text-white hover:bg-ink-800" aria-label="Abrir menu"><Menu /></button>
       </header>
 
       {drawer && (
         <div className="fixed inset-0 z-50 md:hidden">
-          <div className="absolute inset-0 bg-slate-900/60" onClick={() => setDrawer(false)} />
+          <div className="absolute inset-0 bg-black/60" onClick={() => setDrawer(false)} />
           <div className="absolute left-0 top-0 flex h-full w-80 max-w-[85vw] flex-col bg-ink-900">
             <button onClick={() => setDrawer(false)} className="absolute right-2 top-3 rounded-lg p-2 text-white hover:bg-ink-800" aria-label="Fechar menu"><X /></button>
             <Sidebar onNavigate={() => setDrawer(false)} />
@@ -162,7 +162,7 @@ export default function Layout() {
           <div className="border-b border-slate-200 bg-white/70 px-4 py-2.5 text-xs font-medium text-slate-500 backdrop-blur sm:px-6 lg:px-8">
             <span>{crumbs[0]}</span>
             <ChevronRight size={12} className="mx-1.5 inline" />
-            <span className="font-semibold text-ink-900">{crumbs[1]}</span>
+            <span className="font-semibold text-slate-900">{crumbs[1]}</span>
           </div>
         )}
         <div className="p-4 sm:p-6 lg:p-8">

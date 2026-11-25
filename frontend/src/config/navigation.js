@@ -1,10 +1,10 @@
 import {
-  Activity, BarChart3, Boxes, ClipboardList, Cpu, Gauge, Headphones, House, LogOut, PackageCheck,
-  Receipt, Settings, ShieldCheck, Smartphone, Store, Tags, Truck, Users, Wrench,
-} from 'lucide-react';
+  Activity, BarChart3, Boxes, Building, ClipboardList, Cpu, Gauge, Headphones, History, House, LogOut, PackageCheck,
+  Palette, Receipt, Settings, ShieldCheck, Smartphone, Store, Tags, Truck, Users, Wrench,
+} from '../components/icons';
 
 // Estrutura única da navegação: a sidebar, o breadcrumb e as permissões de rota leem daqui.
-// perm: 'chave' -> visível apenas para quem tem a permissão (ver config/permissions.js).
+// perm: 'chave' -> visível só para quem tem a permissão; 'admin' -> só para o admin.
 // Uma central só aparece se sobrar ao menos uma página visível nela.
 export const NAV = [
   { key: 'home', label: 'Tela inicial', to: '/app', icon: House, end: true },
@@ -48,12 +48,23 @@ export const NAV = [
     icon: ShieldCheck,
     base: '/app/admin',
     children: [
-      { to: '/app/admin/metricas', label: 'Métricas da assistência', icon: Activity, perm: 'metrics.view' },
-      { to: '/app/admin/usuarios', label: 'Usuários e permissões', icon: Users, perm: 'users.manage' },
-      { to: '/app/admin/configuracoes', label: 'Configurações', icon: Settings, perm: 'settings.manage' },
-      { action: 'logout', label: 'Sair', icon: LogOut },
+      { to: '/app/admin/metricas', label: 'Métricas da assistência', icon: Activity, perm: 'admin' },
+      { to: '/app/admin/usuarios', label: 'Usuários e permissões', icon: Users, perm: 'admin' },
+      { to: '/app/admin/auditoria', label: 'Auditoria', icon: History, perm: 'admin' },
+      { to: '/app/admin/configuracoes', label: 'Configurações da loja', icon: Settings, perm: 'admin' },
     ],
   },
+  { key: 'prefs', label: 'Configurações gerais', to: '/app/preferencias', icon: Palette, end: true },
+  { key: 'logout', label: 'Sair', action: 'logout', icon: LogOut },
+];
+
+// Portal do superadmin (gestão da plataforma)
+export const SUPER_NAV = [
+  { key: 'tenants', label: 'Assinantes', to: '/super', icon: Building, end: true },
+  { key: 'metrics', label: 'Métricas SaaS', to: '/super/metricas', icon: BarChart3, end: true },
+  { key: 'audit', label: 'Auditoria', to: '/super/auditoria', icon: History, end: true },
+  { key: 'prefs', label: 'Configurações gerais', to: '/super/preferencias', icon: Palette, end: true },
+  { key: 'logout', label: 'Sair', action: 'logout', icon: LogOut },
 ];
 
 // Telas que não aparecem na sidebar, mas precisam de breadcrumb
@@ -64,10 +75,12 @@ const EXTRA = [
 ];
 
 // can: (permissão) => boolean, vindo do AuthContext
-export const navFor = (can) =>
-  NAV.map((g) => (g.children ? { ...g, children: g.children.filter((c) => !c.perm || can(c.perm)) } : g)).filter(
-    (g) => !g.children || g.children.some((c) => !c.action)
-  );
+export const navFor = (can, isSuper) =>
+  isSuper
+    ? SUPER_NAV
+    : NAV.map((g) => (g.children ? { ...g, children: g.children.filter((c) => !c.perm || can(c.perm)) } : g)).filter(
+        (g) => !g.children || g.children.length
+      );
 
 // ['Central de OSs', 'OSs não entregues'] para o caminho atual
 export function crumbsFor(pathname) {

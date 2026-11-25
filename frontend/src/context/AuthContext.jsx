@@ -13,6 +13,12 @@ const save = (user) => {
   }
 };
 
+// Tema do usuário: 'light', 'dark' ou 'system' (segue o sistema operacional)
+export function applyTheme(theme = 'system') {
+  const dark = theme === 'dark' || (theme === 'system' && window.matchMedia?.('(prefers-color-scheme: dark)').matches);
+  document.documentElement.classList.toggle('dark', !!dark);
+}
+
 export function AuthProvider({ children }) {
   const [token, setToken] = useState(localStorage.getItem('token'));
   const [user, setUser] = useState(() => {
@@ -23,7 +29,7 @@ export function AuthProvider({ children }) {
     }
   });
 
-  // Ao abrir o sistema, atualiza o usuário (perfil e permissões podem ter mudado)
+  // Ao abrir o sistema, atualiza o usuário (permissões e assinante podem ter mudado)
   useEffect(() => {
     if (!token) return;
     api
@@ -35,12 +41,15 @@ export function AuthProvider({ children }) {
       .catch(() => {});
   }, [token]);
 
+  useEffect(() => applyTheme(user?.preferences?.theme), [user?.preferences?.theme]);
+
   const login = async (email, password) => {
     const { data } = await api.post('/auth/login', { email, password });
     localStorage.setItem('token', data.token);
     save(data.user);
     setToken(data.token);
     setUser(data.user);
+    return data.user;
   };
 
   const logout = () => {
@@ -63,12 +72,20 @@ export function AuthProvider({ children }) {
     }
   };
 
+  // Depois que o admin salva os dados da loja
+  const setTenant = (tenant) =>
+    setUser((prev) => {
+      const next = { ...prev, tenant };
+      save(next);
+      return next;
+    });
+
   const can = useCallback((permission) => hasPermission(user, permission), [user]);
-  const isOwner = user?.role === 'owner';
-  const isAdmin = user?.role === 'admin' || isOwner;
+  const isAdmin = user?.role === 'admin';
+  const isSuper = user?.role === 'superadmin';
 
   return (
-    <AuthCtx.Provider value={{ token, user, login, logout, updatePreferences, can, isAdmin, isOwner }}>
+    <AuthCtx.Provider value={{ token, user, tenant: user?.tenant, login, logout, updatePreferences, setTenant, can, isAdmin, isSuper }}>
       {children}
     </AuthCtx.Provider>
   );
