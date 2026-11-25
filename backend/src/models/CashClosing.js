@@ -1,4 +1,5 @@
 const mongoose = require('mongoose');
+const { tenantPlugin } = require('../config/tenant');
 const { round2 } = require('../utils/money');
 
 const { Schema } = mongoose;
@@ -16,18 +17,33 @@ const rowSchema = new Schema(
 // Fechamento de caixa de um dia (um por dia; refazer substitui o anterior)
 const schema = new Schema(
   {
-    day: { type: String, required: true, unique: true, match: [/^\d{4}-\d{2}-\d{2}$/, 'Dia inválido (use AAAA-MM-DD)'] },
+    day: { type: String, required: true, match: [/^\d{4}-\d{2}-\d{2}$/, 'Dia inválido (use AAAA-MM-DD)'] },
     opening_float: { type: Number, min: [0, 'Fundo de troco inválido'], default: 0 },
     rows: { type: [rowSchema], default: [] },
     expected_total: { type: Number, default: 0 },
     counted_total: { type: Number, default: 0 },
     difference: { type: Number, default: 0 },
     notes: { type: String, trim: true },
+    status: { type: String, enum: ['open', 'closed'], default: 'open' },
+    // sangria (withdrawal) e suprimento (supply) de dinheiro durante o dia
+    movements: [
+      {
+        kind: { type: String, enum: ['withdrawal', 'supply'], required: true },
+        amount: { type: Number, min: [0.01, 'Valor inválido'], required: true },
+        reason: { type: String, trim: true },
+        by: { type: Schema.Types.ObjectId, ref: 'User' },
+        at: { type: Date, default: Date.now },
+      },
+    ],
+    opened_by: { type: Schema.Types.ObjectId, ref: 'User' },
     closed_by: { type: Schema.Types.ObjectId, ref: 'User' },
+    closed_at: Date,
   },
   { timestamps: { createdAt: 'created_at', updatedAt: 'updated_at' } }
 );
 
+schema.plugin(tenantPlugin);
+schema.index({ tenant: 1, day: 1 }, { unique: true });
 schema.pre('validate', function (next) {
   this.rows.forEach((r) => {
     r.expected = round2(r.expected);

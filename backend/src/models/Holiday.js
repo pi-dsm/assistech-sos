@@ -1,4 +1,5 @@
 const mongoose = require('mongoose');
+const { tenantPlugin } = require('../config/tenant');
 
 const { Schema } = mongoose;
 
@@ -17,7 +18,6 @@ const schema = new Schema(
     date: {
       type: String,
       required: [true, 'Data do feriado é obrigatória'],
-      unique: true,
       validate: { validator: isValidDate, message: 'Data de feriado inválida (use AAAA-MM-DD ou MM-DD)' },
     },
     name: { type: String, required: [true, 'Nome do feriado é obrigatório'], trim: true },
@@ -26,6 +26,8 @@ const schema = new Schema(
   { timestamps: { createdAt: 'created_at', updatedAt: false } }
 );
 
+schema.plugin(tenantPlugin);
+schema.index({ tenant: 1, date: 1 }, { unique: true });
 schema.virtual('recurring').get(function () {
   return this.date.length === 5;
 });

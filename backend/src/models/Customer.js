@@ -1,4 +1,5 @@
 const mongoose = require('mongoose');
+const { tenantPlugin } = require('../config/tenant');
 const { escapeRegex, onlyDigits } = require('../utils/helpers');
 
 const { Schema } = mongoose;
@@ -30,6 +31,7 @@ schema.statics.searchFilter = function (q) {
   return { $or: or };
 };
 
+schema.plugin(tenantPlugin);
 schema.set('toJSON', { virtuals: true, versionKey: false });
 
 module.exports = mongoose.model('Customer', schema);

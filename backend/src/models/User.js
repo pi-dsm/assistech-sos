@@ -1,13 +1,6 @@
 const mongoose = require('mongoose');
-const { ROLES, KEYS, effectivePermissions } = require('../config/permissions');
-
-const overrideSchema = new mongoose.Schema(
-  {
-    key: { type: String, enum: { values: KEYS, message: 'Permissão desconhecida' }, required: true },
-    allowed: { type: Boolean, required: true },
-  },
-  { _id: false }
-);
+const { ROLES, KEYS, DEFAULT_PERMISSIONS } = require('../config/permissions');
+const { tenantPlugin } = require('../config/tenant');
 
 const schema = new mongoose.Schema(
   {
@@ -16,11 +9,12 @@ const schema = new mongoose.Schema(
     password: { type: String, required: true, select: false },
     phone: { type: String, trim: true },
     alternative_phone: { type: String, trim: true },
-    role: { type: String, enum: { values: ROLES, message: 'Nível de acesso inválido' }, default: 'attendant' },
-    // Exceções ao padrão do perfil: [{ key: 'catalog.edit', allowed: false }, { key: 'metrics.view', allowed: true }]
-    permission_overrides: { type: [overrideSchema], default: [] },
+    role: { type: String, enum: { values: ROLES, message: 'Perfil inválido' }, default: 'user' },
+    // permissões do user, marcadas pelo admin (o admin tem todas)
+    permissions: { type: [{ type: String, enum: { values: KEYS, message: 'Permissão desconhecida' } }], default: () => [...DEFAULT_PERMISSIONS] },
     is_active: { type: Boolean, default: true },
     preferences: {
+      theme: { type: String, enum: ['light', 'dark', 'system'], default: 'system' },
       orders_view: { type: String, enum: ['kanban', 'workspace', 'table'], default: 'kanban' },
       workspace_order: { type: [mongoose.Schema.Types.ObjectId], default: [] },
     },
@@ -28,12 +22,10 @@ const schema = new mongoose.Schema(
   { timestamps: { createdAt: 'created_at', updatedAt: 'updated_at' } }
 );
 
-// Permissões efetivas (perfil + exceções)
-schema.virtual('permissions').get(function () {
-  return effectivePermissions(this.role, this.permission_overrides);
-});
+schema.plugin(tenantPlugin); // o superadmin não tem assinante
+
 schema.methods.can = function (permission) {
-  return this.permissions.includes(permission);
+  return this.role === 'admin' || this.permissions.includes(permission);
 };
 
 schema.set('toJSON', {
@@ -41,6 +33,7 @@ schema.set('toJSON', {
   versionKey: false,
   transform: (doc, ret) => {
     delete ret.password;
+    if (doc.role === 'admin') ret.permissions = [...KEYS];
     return ret;
   },
 });

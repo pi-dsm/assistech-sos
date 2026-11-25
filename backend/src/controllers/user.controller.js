@@ -1,71 +1,50 @@
 const argon2 = require('argon2');
 const User = require('../models/User');
-const { PERMISSIONS, ROLES, overridesToObject } = require('../config/permissions');
+const Tenant = require('../models/Tenant');
+const { PERMISSIONS } = require('../config/permissions');
 const { asyncHandler, pick, httpError } = require('../utils/helpers');
 
-const isOwner = (u) => u?.role === 'owner';
+const FIELDS = ['name', 'email', 'phone', 'permissions'];
+const ROLES = ['admin', 'user']; // o admin da assistência não cria superadmin
 
-// Só a dona do sistema cria, edita ou desativa outra conta de dona do sistema
-function guardOwner(actor, target, nextRole) {
-  if ((isOwner(target) || nextRole === 'owner') && !isOwner(actor)) {
-    throw httpError(403, 'Apenas a dona do sistema pode gerenciar contas de dona do sistema.');
-  }
-}
+const load = async (id) => {
+  const user = await User.findById(id).select('+password');
+  if (!user) throw httpError(404, 'Usuário não encontrado');
+  return user;
+};
 
-// { chave: true | false | null } -> exceções do usuário (null remove a exceção e volta ao padrão do perfil)
-function applyOverrides(user, overrides) {
-  if (!overrides || typeof overrides !== 'object') return;
-  const current = overridesToObject(user.permission_overrides);
-  for (const [key, value] of Object.entries(overrides)) {
-    if (!PERMISSIONS[key]) throw httpError(400, `Permissão desconhecida: ${key}`);
-    if (value === true || value === false) current[key] = value;
-    else delete current[key];
-  }
-  user.permission_overrides = Object.entries(current).map(([key, allowed]) => ({ key, allowed }));
-}
-
-// GET /users/permissions -> catálogo de permissões e padrões por perfil
+// GET /users/permissions -> lista de permissões que o admin pode marcar
 exports.permissions = asyncHandler(async (req, res) => {
-  res.json({
-    roles: ROLES,
-    permissions: Object.entries(PERMISSIONS).map(([key, p]) => ({ key, label: p.label, group: p.group, roles: p.roles })),
-  });
+  res.json(Object.entries(PERMISSIONS).map(([key, p]) => ({ key, label: p.label, group: p.group, default: !!p.default })));
 });
 
 exports.create = asyncHandler(async (req, res) => {
-  const { password } = req.body;
-  if (!password || password.length < 6) return res.status(400).json({ message: 'Senha deve ter ao menos 6 caracteres' });
-  guardOwner(req.user, null, req.body.role);
-  const user = new User({
-    ...pick(req.body, ['name', 'email', 'phone', 'role']),
-    password: await argon2.hash(password),
-  });
-  applyOverrides(user, req.body.permission_overrides);
-  await user.save();
+  const { password, role = 'user' } = req.body;
+  if (!password || password.length < 6) throw httpError(400, 'Senha deve ter ao menos 6 caracteres');
+  if (!ROLES.includes(role)) throw httpError(400, 'Perfil inválido');
+  const limit = Tenant.PLANS[req.tenant.plan].max_users;
+  if ((await User.countDocuments({ is_active: true })) >= limit) {
+    throw httpError(409, `O plano ${Tenant.PLANS[req.tenant.plan].label} permite até ${limit} usuários ativos.`);
+  }
+  const user = await User.create({ ...pick(req.body, FIELDS), role, password: await argon2.hash(password) });
   res.status(201).json(user);
 });
 
-exports.list = asyncHandler(async (req, res) => {
-  res.json(await User.find().sort({ name: 1 }));
-});
+exports.list = asyncHandler(async (req, res) => res.json(await User.find().sort({ name: 1 })));
 
-exports.get = asyncHandler(async (req, res) => {
-  const user = await User.findById(req.params.id);
-  if (!user) return res.status(404).json({ message: 'Usuário não encontrado' });
-  res.json(user);
-});
+exports.get = asyncHandler(async (req, res) => res.json(await load(req.params.id)));
 
 exports.update = asyncHandler(async (req, res) => {
-  const user = await User.findById(req.params.id).select('+password');
-  if (!user) return res.status(404).json({ message: 'Usuário não encontrado' });
-  guardOwner(req.user, user, req.body.role);
-  if (String(user._id) === String(req.user._id) && req.body.role && req.body.role !== user.role) {
-    throw httpError(400, 'Você não pode alterar o próprio nível de acesso.');
+  const user = await load(req.params.id);
+  const self = String(user._id) === String(req.user._id);
+  if (req.body.role !== undefined) {
+    if (!ROLES.includes(req.body.role)) throw httpError(400, 'Perfil inválido');
+    if (self && req.body.role !== user.role) throw httpError(400, 'Você não pode alterar o próprio perfil.');
+    user.role = req.body.role;
   }
-  user.set(pick(req.body, ['name', 'email', 'phone', 'role', 'is_active']));
-  applyOverrides(user, req.body.permission_overrides);
+  user.set(pick(req.body, FIELDS));
   if (req.body.password) {
-    if (req.body.password.length < 6) return res.status(400).json({ message: 'Senha deve ter ao menos 6 caracteres' });
+    if (req.body.password.length < 6) throw httpError(400, 'Senha deve ter ao menos 6 caracteres');
     user.password = await argon2.hash(req.body.password);
   }
   await user.save();
@@ -73,12 +52,8 @@ exports.update = asyncHandler(async (req, res) => {
 });
 
 exports.toggleStatus = asyncHandler(async (req, res) => {
-  const user = await User.findById(req.params.id);
-  if (!user) return res.status(404).json({ message: 'Usuário não encontrado' });
-  if (String(user._id) === String(req.user._id)) {
-    return res.status(400).json({ message: 'Você não pode desativar o próprio acesso' });
-  }
-  guardOwner(req.user, user);
+  const user = await load(req.params.id);
+  if (String(user._id) === String(req.user._id)) throw httpError(400, 'Você não pode desativar o próprio acesso');
   user.is_active = !user.is_active;
   await user.save();
   res.json(user);

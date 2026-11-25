@@ -1,4 +1,5 @@
 const mongoose = require('mongoose');
+const { tenantPlugin } = require('../config/tenant');
 const { onlyDigits } = require('../utils/helpers');
 const { isValidDocument } = require('../utils/document');
 
@@ -22,9 +23,10 @@ const schema = new Schema(
   { timestamps: { createdAt: 'created_at', updatedAt: 'updated_at' } }
 );
 
+schema.plugin(tenantPlugin);
 schema.index({ name: 1 });
 // Único apenas quando informado (vários fornecedores podem ficar sem documento)
-schema.index({ document_digits: 1 }, { unique: true, partialFilterExpression: { document_digits: { $type: 'string' } } });
+schema.index({ tenant: 1, document_digits: 1 }, { unique: true, partialFilterExpression: { document_digits: { $type: 'string' } } });
 
 schema.pre('validate', function (next) {
   const digits = onlyDigits(this.document);

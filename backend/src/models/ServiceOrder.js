@@ -1,4 +1,5 @@
 const mongoose = require('mongoose');
+const { tenantPlugin } = require('../config/tenant');
 const { nextSequence } = require('./Counter');
 const { paymentSchema } = require('./schemas/payment.schema');
 const { round2, formatBRL } = require('../utils/money');
@@ -6,7 +7,7 @@ const { netPaid, paymentState } = require('../utils/payments');
 
 const { Schema } = mongoose;
 
-const OPEN_STATUSES = ['received', 'in_diagnosis', 'in_repair', 'ready'];
+const OPEN_STATUSES = ['received', 'in_diagnosis', 'in_repair', 'awaiting_part', 'ready'];
 const CLOSED_STATUSES = ['delivered', 'cancelled', 'returned'];
 const STATUSES = [...OPEN_STATUSES, ...CLOSED_STATUSES];
 
@@ -52,7 +53,7 @@ const historySchema = new Schema(
 const schema = new Schema(
   {
     // Número da OS
-    service_order_number: { type: Number, unique: true },
+    service_order_number: { type: Number },
 
     // Faz referência ao cliente e ao aparelho
     customer: { type: Schema.Types.ObjectId, ref: 'Customer', required: [true, 'Cliente é obrigatório'], index: true },
@@ -94,6 +95,7 @@ const schema = new Schema(
     grand_total_amount: { type: Number, default: 0 },
     profit_amount: { type: Number, default: 0 },
 
+    budget_approved_at: Date, // cliente aprovou o orçamento pelo link público
     ready_at: Date,
     delivered_at: Date,
     warranty_days: { type: Number, min: 0 },
@@ -110,6 +112,8 @@ schema.index({ created_at: -1 });
 schema.index({ delivered_at: -1 });
 
 // lucro = valor cobrado - custo das peças | OS de garantia não cobra nada (lucro = -custo)
+schema.plugin(tenantPlugin);
+schema.index({ tenant: 1, service_order_number: 1 }, { unique: true });
 schema.methods.recalculate = function () {
   const parts = this.parts_used || [];
   const sell = parts.reduce((s, p) => s + (p.sale_price || 0) * (p.quantity || 1), 0);

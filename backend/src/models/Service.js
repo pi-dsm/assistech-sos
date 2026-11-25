@@ -1,8 +1,9 @@
 const mongoose = require('mongoose');
+const { tenantPlugin } = require('../config/tenant');
 
 const schema = new mongoose.Schema(
   {
-    name: { type: String, required: [true, 'Nome do serviço é obrigatório'], trim: true, unique: true },
+    name: { type: String, required: [true, 'Nome do serviço é obrigatório'], trim: true },
     description: { type: String, trim: true },
     price: { type: Number, required: [true, 'Preço do serviço é obrigatório'], min: [0, 'Preço inválido'] },
     cost_price: { type: Number, min: 0, default: 0 }, // custo de insumo (ex.: papel e toner por cópia)
@@ -11,6 +12,8 @@ const schema = new mongoose.Schema(
   { timestamps: { createdAt: 'created_at', updatedAt: 'updated_at' } }
 );
 
+schema.plugin(tenantPlugin);
+schema.index({ tenant: 1, name: 1 }, { unique: true });
 schema.set('toJSON', { virtuals: true, versionKey: false });
 
 module.exports = mongoose.model('Service', schema);
