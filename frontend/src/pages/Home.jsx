@@ -17,10 +17,10 @@ const IDLE_DAYS = 60; // produto parado: com estoque e sem venda neste intervalo
 const VERY_LATE_DAYS = 3; // OS "muito atrasada": previsão de entrega vencida há este tanto
 
 const TONES = {
-  danger: { cls: 'border-red-200 bg-red-50 text-red-900', icon: AlertTriangle, iconCls: 'text-red-600' },
-  warn: { cls: 'border-amber-200 bg-amber-50 text-amber-900', icon: Clock, iconCls: 'text-amber-600' },
-  info: { cls: 'border-blue-200 bg-blue-50 text-blue-900', icon: PackageX, iconCls: 'text-blue-600' },
-  tip: { cls: 'border-emerald-200 bg-emerald-50 text-emerald-900', icon: Lightbulb, iconCls: 'text-emerald-600' },
+  danger: { cls: 'border-red-200 bg-red-50 text-red-900', icon: AlertTriangle, iconCls: 'text-red-700' },
+  warn: { cls: 'border-amber-200 bg-amber-50 text-amber-900', icon: Clock, iconCls: 'text-amber-700' },
+  info: { cls: 'border-blue-200 bg-blue-50 text-blue-900', icon: PackageX, iconCls: 'text-blue-700' },
+  tip: { cls: 'border-emerald-200 bg-emerald-50 text-emerald-900', icon: Lightbulb, iconCls: 'text-emerald-700' },
 };
 
 function buildWarnings({ overview, orders, lowStock, idle, summary }) {
@@ -152,12 +152,12 @@ export default function Home() {
       <div className="grid gap-4 sm:grid-cols-2">
         <Link to="/app/os/nova" className="group flex items-center gap-4 rounded-2xl bg-blue-600 p-6 text-white shadow-pop transition hover:bg-blue-700">
           <span className="grid h-14 w-14 place-items-center rounded-xl bg-white/20"><Wrench size={28} /></span>
-          <span className="flex-1"><span className="block text-2xl font-extrabold">Nova OS</span><span className="text-blue-50">Receber um aparelho para conserto</span></span>
+          <span className="flex-1"><span className="block text-2xl font-extrabold">Nova OS</span><span className="text-white/80">Receber um aparelho para conserto</span></span>
           <ArrowRight className="transition group-hover:translate-x-1" />
         </Link>
         <Link to="/app/vendas/nova" className="group flex items-center gap-4 rounded-2xl bg-ink-900 p-6 text-white shadow-pop transition hover:bg-ink-800">
           <span className="grid h-14 w-14 place-items-center rounded-xl bg-white/15"><ShoppingCart size={28} /></span>
-          <span className="flex-1"><span className="block text-2xl font-extrabold">Nova venda</span><span className="text-blue-100">Produtos e serviços no balcão</span></span>
+          <span className="flex-1"><span className="block text-2xl font-extrabold">Nova venda</span><span className="text-white/80">Produtos e serviços no balcão</span></span>
           <ArrowRight className="transition group-hover:translate-x-1" />
         </Link>
       </div>
@@ -261,12 +261,12 @@ export default function Home() {
                     <Tooltip formatter={(v) => brl(v)} cursor={{ fill: 'rgba(148,163,184,0.12)' }} />
                     <Bar dataKey="value" name="Hoje" radius={[6, 6, 0, 0]}>
                       {chart.map((d) => <Cell key={d.name} fill={d.color} />)}
-                      <LabelList dataKey="value" position="top" formatter={(v) => brl(v)} style={{ fontSize: 11, fontWeight: 700, fill: '#0f1b45' }} />
+                      <LabelList dataKey="value" position="top" formatter={(v) => brl(v)} style={{ fontSize: 11, fontWeight: 700, fill: 'var(--color-slate-900)' }} />
                     </Bar>
                   </BarChart>
                 </ResponsiveContainer>
               </div>
-              <div className="mt-3 grid grid-cols-2 gap-2 text-xs sm:grid-cols-4">
+              <div className="mt-3 grid grid-cols-2 gap-2 text-xs">
                 <p className="rounded-lg bg-slate-50 p-2">Ontem<br /><b className="text-sm text-slate-900">{brl(summary.previous.revenue)}</b></p>
                 <p className="rounded-lg bg-slate-50 p-2">Vendas hoje<br /><b className="text-sm text-slate-900">{c.sales_count}</b></p>
                 <p className="rounded-lg bg-slate-50 p-2">OS entregues<br /><b className="text-sm text-slate-900">{c.delivered_orders}</b></p>

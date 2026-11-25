@@ -159,8 +159,8 @@ export default function Layout() {
 
       <main className="min-w-0 flex-1">
         {crumbs.length > 1 && (
-          <div className="border-b border-slate-200 bg-white/70 px-4 py-2.5 text-xs font-medium text-slate-500 backdrop-blur sm:px-6 lg:px-8">
-            <span>{crumbs[0]}</span>
+          <div className="border-b border-slate-200 bg-white px-4 py-2.5 text-xs font-medium text-slate-600 sm:px-6 lg:px-8">
+            <span className="font-semibold text-blue-700">{crumbs[0]}</span>
             <ChevronRight size={12} className="mx-1.5 inline" />
             <span className="font-semibold text-slate-900">{crumbs[1]}</span>
           </div>
