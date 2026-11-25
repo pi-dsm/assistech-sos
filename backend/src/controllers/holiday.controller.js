@@ -1,21 +1,11 @@
 const Holiday = require('../models/Holiday');
-const { nationalHolidays, toKey } = require('../utils/businessDays');
-const { getCalendar } = require('../services/calendar.service');
+const { nationalHolidays } = require('../utils/businessDays');
 const { asyncHandler, pick, httpError } = require('../utils/helpers');
 
-// GET /holidays?year=2026 -> feriados nacionais do ano + todos os locais cadastrados
+// GET /holidays?year=2026 -> feriados nacionais do ano + os locais da assistência
 exports.list = asyncHandler(async (req, res) => {
   const year = parseInt(req.query.year, 10) || new Date().getFullYear();
-  const custom = await Holiday.find().sort({ date: 1 });
-  res.json({ year, national: nationalHolidays(year), custom });
-});
-
-// GET /holidays/preview?days=5 -> data prevista após N dias úteis (útil para conferência)
-exports.preview = asyncHandler(async (req, res) => {
-  const days = parseInt(req.query.days, 10);
-  if (!Number.isInteger(days) || days < 0 || days > 90) throw httpError(400, 'Informe de 0 a 90 dias úteis');
-  const calendar = await getCalendar();
-  res.json({ days, date: toKey(calendar.addBusinessDays(new Date(), days)) });
+  res.json({ year, national: nationalHolidays(year), custom: await Holiday.find().sort({ date: 1 }) });
 });
 
 exports.create = asyncHandler(async (req, res) => {
@@ -23,7 +13,6 @@ exports.create = asyncHandler(async (req, res) => {
 });
 
 exports.remove = asyncHandler(async (req, res) => {
-  const holiday = await Holiday.findByIdAndDelete(req.params.id);
-  if (!holiday) throw httpError(404, 'Feriado não encontrado');
+  if (!(await Holiday.findByIdAndDelete(req.params.id))) throw httpError(404, 'Feriado não encontrado');
   res.json({ message: 'Feriado removido' });
 });

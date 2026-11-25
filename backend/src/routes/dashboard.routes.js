@@ -7,6 +7,7 @@ router.get('/summary', c.summary);
 router.get('/overview', c.overview);
 router.get('/sales', can('metrics.view'), c.salesAnalytics);
 router.get('/payments', can('metrics.view'), c.payments); // recebimentos por forma de pagamento num intervalo
+router.get('/predictive-revenue', can('metrics.view'), c.predictiveRevenue);
 router.get('/goals', c.getGoals);
 router.put('/goals', can('goals.edit'), c.updateGoals);
 

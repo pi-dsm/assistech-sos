@@ -305,3 +305,32 @@ exports.overview = asyncHandler(async (req, res) => {
     },
   });
 });
+// GET /dashboard/predictive-revenue?months=6
+// Faturamento recebido por mês + previsão dos próximos 3 meses por regressão linear (mínimos quadrados)
+// sobre os meses já fechados. Simples e explicável: tendência = inclinação da reta.
+exports.predictiveRevenue = asyncHandler(async (req, res) => {
+  const months = Math.min(24, Math.max(3, parseInt(req.query.months, 10) || 6));
+  const now = new Date();
+  const monthKey = (d) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+  const keys = Array.from({ length: months }, (_, i) => monthKey(new Date(now.getFullYear(), now.getMonth() - months + 1 + i, 1)));
+  const signed = { $cond: [{ $eq: ['$payments.payment_status', 'paid'] }, '$payments.amount', { $multiply: ['$payments.amount', -1] }] };
+  const pipeline = [
+    { $unwind: '$payments' },
+    { $match: { 'payments.paid_at': { $gte: new Date(now.getFullYear(), now.getMonth() - months + 1, 1) }, 'payments.payment_status': { $in: ['paid', 'refunded'] } } },
+    { $group: { _id: { $dateToString: { format: '%Y-%m', date: '$payments.paid_at', timezone: process.env.TZ || 'America/Sao_Paulo' } }, total: { $sum: signed } } },
+  ];
+  const rows = [...(await Sale.aggregate(pipeline)), ...(await ServiceOrder.aggregate(pipeline))];
+  const history = keys.map((month) => ({ month, total: round2(rows.filter((r) => r._id === month).reduce((s, r) => s + r.total, 0)) }));
+
+  const closed = history.slice(0, -1).map((h) => h.total); // o mês atual ainda está em andamento
+  const n = closed.length;
+  const meanX = (n - 1) / 2;
+  const meanY = closed.reduce((s, y) => s + y, 0) / n;
+  const varX = closed.reduce((s, _, x) => s + (x - meanX) ** 2, 0);
+  const slope = varX ? closed.reduce((s, y, x) => s + (x - meanX) * (y - meanY), 0) / varX : 0;
+  const forecast = [0, 1, 2].map((i) => ({
+    month: monthKey(new Date(now.getFullYear(), now.getMonth() + i, 1)),
+    total: round2(Math.max(0, meanY + slope * (n + i - meanX))),
+  }));
+  res.json({ history, forecast, trend_per_month: round2(slope), method: 'Regressão linear sobre os meses fechados' });
+});
