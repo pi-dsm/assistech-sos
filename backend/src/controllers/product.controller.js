@@ -2,7 +2,7 @@ const Product = require('../models/Product');
 const StockMovement = require('../models/StockMovement');
 const { asyncHandler, pick, clean, escapeRegex, parseLimit, httpError } = require('../utils/helpers');
 
-const FIELDS = ['name', 'barcode', 'kind', 'category', 'description', 'supplier', 'cost_price', 'sale_price', 'min_stock'];
+const FIELDS = ['name', 'barcode', 'kind', 'category', 'description', 'supplier', 'cost_price', 'sale_price', 'min_stock', 'location', 'show_in_showcase'];
 
 exports.list = asyncHandler(async (req, res) => {
   const { q, kind, category, low_stock, active } = req.query;

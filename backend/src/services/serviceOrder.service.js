@@ -16,7 +16,7 @@ const PART_FIELDS = [
   'cost_price', 'sale_price', 'quantity', 'warranty_days',
 ];
 // Mudanças "rápidas" (sem dados obrigatórios). 'ready' e 'delivered' têm fluxo próprio.
-const QUICK_STATUSES = ['received', 'in_diagnosis', 'in_repair', 'cancelled'];
+const QUICK_STATUSES = ['received', 'in_diagnosis', 'in_repair', 'awaiting_part', 'cancelled'];
 
 const addDays = (date, days) => new Date(date.getTime() + days * 86400000);
 const ensureOpen = (order) => {
@@ -113,7 +113,7 @@ exports.changeStatus = async (order, status, user) => {
 
 // 3) in_repair -> ready: peças e mão de obra obrigatórias (ou "nenhuma peça")
 exports.markReady = async (order, body, user) => {
-  if (!['in_repair', 'ready'].includes(order.status)) {
+  if (!['in_repair', 'awaiting_part', 'ready'].includes(order.status)) {
     throw httpError(409, 'Só é possível marcar como pronta uma OS que está em conserto.');
   }
   const noParts = !!body.no_parts_used;

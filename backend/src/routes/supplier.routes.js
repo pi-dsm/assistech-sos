@@ -4,6 +4,7 @@ const { authenticate, can } = require('../middleware/auth');
 
 router.use(authenticate);
 router.get('/', c.list);
+router.post('/purchase-order', can('catalog.edit'), c.purchaseOrder); // antes de '/:id'
 router.get('/:id', c.get);
 router.post('/', can('suppliers.edit'), c.create);
 router.put('/:id', can('suppliers.edit'), c.update);

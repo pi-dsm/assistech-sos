@@ -136,3 +136,25 @@ exports.warrantyPdf = asyncHandler(async (req, res) => {
   if (order.status !== 'delivered') throw httpError(409, 'O termo de garantia só é emitido para OS entregues.');
   sendPdf(res, await pdf.buildWarranty(order), `OS-${order.service_order_number}-garantia.pdf`);
 });
+// POST /service-orders/:id/notify-whatsapp -> monta a mensagem do status atual e o link wa.me.
+// Não envia nada sozinho: o front abre o link (ou copia o texto) só se a pessoa quiser.
+const MESSAGES = {
+  received: 'recebemos o seu {device} (OS nº {n}). Acompanhe por aqui: {link}',
+  in_diagnosis: 'o orçamento da OS nº {n} ({device}) está pronto. Veja e aprove por aqui: {link}',
+  in_repair: 'o seu {device} (OS nº {n}) está em reparo. Acompanhe: {link}',
+  awaiting_part: 'a OS nº {n} ({device}) está aguardando a chegada de uma peça. Avisaremos assim que chegar.',
+  ready: 'o seu {device} (OS nº {n}) está pronto para retirada!',
+  delivered: 'obrigado pela confiança! A garantia da OS nº {n} está registrada.',
+  cancelled: 'a OS nº {n} ({device}) foi cancelada. Qualquer dúvida, fale com a gente.',
+};
+exports.notifyWhatsapp = asyncHandler(async (req, res) => {
+  const order = await (await loadOrder(req.params.id)).populate(FULL);
+  const link = `${process.env.PUBLIC_URL || 'http://localhost:5173'}/loja/${req.tenant.slug}/os/${order.service_order_number}`;
+  const body = (MESSAGES[order.status] || MESSAGES.received)
+    .replace('{n}', order.service_order_number)
+    .replace('{device}', order.device ? `${order.device.brand} ${order.device.model}` : 'aparelho')
+    .replace('{link}', link);
+  const message = `Olá, ${order.customer?.name?.split(' ')[0] || 'tudo bem'}! ${req.tenant.name}: ${body}`;
+  const digits = String(order.customer?.phone || '').replace(/\D/g, '');
+  res.json({ message, phone: digits, url: `https://wa.me/${digits.length <= 11 ? '55' : ''}${digits}?text=${encodeURIComponent(message)}` });
+});
