@@ -1,7 +1,9 @@
 const argon2 = require('argon2');
 const jwt = require('jsonwebtoken');
 const User = require('../models/User');
-const { asyncHandler } = require('../utils/helpers');
+const { asyncHandler, httpError } = require('../utils/helpers');
+
+const VIEWS = ['kanban', 'workspace', 'table'];
 
 exports.login = asyncHandler(async (req, res) => {
   const { email, password } = req.body;
@@ -19,6 +21,7 @@ exports.login = asyncHandler(async (req, res) => {
   res.json({ token, user });
 });
 
+// Usuário logado, com as permissões efetivas (o front atualiza a sessão ao abrir)
 exports.me = asyncHandler(async (req, res) => res.json(req.user));
 
 exports.updatePreferences = asyncHandler(async (req, res) => {

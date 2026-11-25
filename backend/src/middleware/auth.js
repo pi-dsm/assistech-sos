@@ -15,5 +15,10 @@ exports.authenticate = async (req, res, next) => {
   }
 };
 
+// Por perfil (a dona do sistema sempre passa)
 exports.authorize = (...roles) => (req, res, next) =>
-  roles.includes(req.user.role) ? next() : res.status(403).json({ message: 'Acesso negado' });
+  req.user.role === 'owner' || roles.includes(req.user.role) ? next() : res.status(403).json({ message: 'Acesso negado' });
+
+// Por permissão (perfil + exceções do usuário). Use: can('catalog.edit')
+exports.can = (permission) => (req, res, next) =>
+  req.user.can(permission) ? next() : res.status(403).json({ message: 'Você não tem permissão para esta ação' });

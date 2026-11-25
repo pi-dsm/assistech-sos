@@ -1,8 +1,9 @@
 const router = require('express').Router();
 const c = require('../controllers/user.controller');
-const { authenticate, authorize } = require('../middleware/auth');
+const { authenticate, can } = require('../middleware/auth');
 
-router.use(authenticate, authorize('admin'));
+router.use(authenticate, can('users.manage'));
+router.get('/permissions', c.permissions); // antes de '/:id'
 router.post('/', c.create);
 router.get('/', c.list);
 router.get('/:id', c.get);
