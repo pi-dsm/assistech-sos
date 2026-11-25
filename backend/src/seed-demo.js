@@ -1,4 +1,5 @@
-// Seed de APRESENTAÇÃO do projeto: 60 dias de operação fictícia de uma assistência técnica.
+// Seed de APRESENTAÇÃO do AssisTech SOS: o superadmin, 3 assinantes e 60 dias de operação fictícia
+// da Compucell (mais 4 meses de histórico resumido para a previsão de receita).
 // ATENÇÃO: apaga todos os dados do banco configurado em MONGODB_URI antes de popular.
 // Uso: npm run seed:demo
 process.env.TZ = process.env.TZ || 'America/Sao_Paulo';
@@ -18,6 +19,9 @@ const Supplier = require('./models/Supplier');
 const Holiday = require('./models/Holiday');
 const CashClosing = require('./models/CashClosing');
 const { Counter } = require('./models/Counter');
+const Tenant = require('./models/Tenant');
+const AuditLog = require('./models/AuditLog');
+const { runAs } = require('./config/tenant');
 const { createSale, refund } = require('./services/sale.service');
 const { receivedByMethod } = require('./services/payments.service');
 const { round2 } = require('./utils/money');
@@ -54,18 +58,59 @@ const isSunday = (daysAgo) => at(daysAgo, 12).getDay() === 0;
   await mongoose.connect(process.env.MONGODB_URI);
   console.log('Limpando o banco…');
   await Promise.all(
-    [User, Customer, Device, Product, StockMovement, Service, ServiceOrder, Sale, Setting, Counter, Supplier, Holiday, CashClosing].map((m) => m.deleteMany())
+    [User, Customer, Device, Product, StockMovement, Service, ServiceOrder, Sale, Setting, Counter, Supplier, Holiday, CashClosing, Tenant, AuditLog].map((m) => m.deleteMany())
   );
 
-  // ── Usuários (um de cada perfil) ───────────────────────────────────────────
-  const hash = (p) => argon2.hash(p);
-  const [, admin, tech, attendant] = await User.create([
-    { name: 'Dona do Sistema', email: 'dona@compucell.com', password: await hash('dona123'), role: 'owner', phone: '(14) 99700-0001' },
-    { name: 'Roberto Almeida', email: 'admin@email.com', password: await hash('admin123'), role: 'admin', phone: '(14) 99700-0002' },
-    { name: 'Lucas Ferreira', email: 'tecnico@email.com', password: await hash('tecnico123'), role: 'technician', phone: '(14) 99700-0003' },
+  // ── Plataforma: superadmin e assinantes ───────────────────────────────────
+  await User.create({ name: 'Anelize Nardelli', email: 'super@assistech.com', password: await argon2.hash('super123'), role: 'superadmin' });
+  const [compucell, consertaja] = await Tenant.create([
     {
-      name: 'Juliana Costa', email: 'atendente@email.com', password: await hash('atendente123'), role: 'attendant', phone: '(14) 99700-0004',
-      permission_overrides: [{ key: 'cash.close', allowed: true }], // exemplo de exceção: atendente que fecha o caixa
+      name: 'Compucell Tecnologias', slug: 'compucell', plan: 'pro', document: '12.345.678/0001-95', phone: '(14) 3622-0000', whatsapp: '(14) 99700-0002', address: 'Rua Humaitá, 100 - Centro, Jaú - SP',
+      showcase: { enabled: true, headline: 'Assistência técnica de celulares e computadores em Jaú', about: 'Conserto com garantia, peças de qualidade e orçamento pelo WhatsApp.' },
+    },
+    { name: 'Conserta Já Jaú', slug: 'consertaja', plan: 'basic', phone: '(14) 3621-4444', address: 'Av. Brasil, 500 - Jaú - SP', showcase: { headline: 'Seu celular pronto no mesmo dia' } },
+    { name: 'Cell Point Bariri', slug: 'cellpoint', plan: 'basic', is_active: false, deactivated_at: new Date(Date.now() - 12 * 86400000) }, // cancelou: aparece no churn
+  ]);
+  await Tenant.updateOne({ _id: compucell._id }, { created_at: new Date(Date.now() - 200 * 86400000) }, { timestamps: false });
+
+  // Segunda assistência: poucos dados, só para mostrar o isolamento entre assinantes
+  await runAs(consertaja, async () => {
+    await User.create({ name: 'Carlos Mendes', email: 'admin@consertaja.com', password: await argon2.hash('admin123'), role: 'admin' });
+    const c = await Customer.create({ name: 'Paula Ribeiro', phone: '(14) 99111-2222', alternative_phone: '(14) 99111-3333' });
+    const d = await Device.create({ customer: c._id, brand: 'Motorola', model: 'Moto G84' });
+    await ServiceOrder.create({ customer: c._id, device: d._id, reported_issue: 'Não carrega', estimated_budget_at: new Date(), estimated_delivery_at: new Date(Date.now() + 2 * 86400000) });
+    await Service.create({ name: 'Troca de conector de carga', price: 120 });
+  });
+
+  await runAs(compucell, () => populateCompucell());
+
+  const [tenants, users] = await Promise.all([Tenant.countDocuments(), User.countDocuments()]);
+  console.log(`\n${tenants} assinantes e ${users} usuários.`);
+  console.log('\nAcessos:');
+  console.log('  SuperAdmin             super@assistech.com    / super123');
+  console.log('  Compucell (admin)      admin@compucell.com    / admin123');
+  console.log('  Compucell (user)       lucas@compucell.com    / lucas123     (permissões padrão)');
+  console.log('  Compucell (user)       juliana@compucell.com  / juliana123   (também estorna e vê métricas)');
+  console.log('  Conserta Já (admin)    admin@consertaja.com   / admin123');
+  console.log('  Vitrine pública        http://localhost:5173/loja/compucell');
+  await mongoose.disconnect();
+})().catch(async (err) => {
+  console.error(err);
+  await mongoose.disconnect();
+  process.exit(1);
+});
+
+// Dados da Compucell (roda com o assinante ativo: todo documento recebe tenant = Compucell)
+async function populateCompucell() {
+
+  // ── Usuários: o admin e dois users com permissões diferentes ───────────────
+  const hash = (p) => argon2.hash(p);
+  const [admin, tech, attendant] = await User.create([
+    { name: 'Roberto Almeida', email: 'admin@compucell.com', password: await hash('admin123'), role: 'admin', phone: '(14) 99700-0002' },
+    { name: 'Lucas Ferreira', email: 'lucas@compucell.com', password: await hash('lucas123'), role: 'user', phone: '(14) 99700-0003' },
+    {
+      name: 'Juliana Costa', email: 'juliana@compucell.com', password: await hash('juliana123'), role: 'user', phone: '(14) 99700-0004',
+      permissions: ['orders.manage', 'sales.create', 'cash.close', 'catalog.edit', 'suppliers.edit', 'sales.refund', 'metrics.view'],
     },
   ]);
   const staff = [admin, tech, attendant];
@@ -487,20 +532,28 @@ const isSunday = (daysAgo) => at(daysAgo, 12).getDay() === 0;
         return { method: m.method, expected, counted: round2(expected + (m.method === 'cash' ? shortfall : 0)) };
       }),
       notes: shortfall < 0 ? 'Troco dado a mais em uma venda em dinheiro.' : undefined,
+      status: 'closed', opened_by: attendant._id, closed_at: to,
       closed_by: d % 2 ? attendant._id : admin._id,
     });
   }
 
+  // Caixa de hoje aberto, com uma sangria (para mostrar o caixa em andamento)
+  await CashClosing.create({
+    day: `${NOW.getFullYear()}-${String(NOW.getMonth() + 1).padStart(2, '0')}-${String(NOW.getDate()).padStart(2, '0')}`,
+    opening_float: 100, opened_by: attendant._id,
+    movements: [{ kind: 'withdrawal', amount: 50, reason: 'Compra de material de limpeza', by: admin._id }],
+  });
+
+  // Histórico resumido de 2 a 6 meses atrás (só serviços de balcão, sem mexer no estoque) para a previsão de receita
+  for (let d = 180; d > 60; d -= 2) {
+    const when = at(d);
+    const service = pick([svc.format, svc.transfer, svc.clean]);
+    const quantity = int(1, 3);
+    const payment_method = pick(['pix', 'cash', 'debit_card']);
+    const sale = await createSale({ items: [{ item_type: 'service', service_id: service._id, quantity }], payments: [{ amount: round2(service.price * quantity), payment_method }] }, admin);
+    await Sale.updateOne({ _id: sale._id }, { $set: { created_at: when, updated_at: when, 'payments.$[].paid_at': when } }, { timestamps: false });
+  }
+
   const [orders, sales] = await Promise.all([ServiceOrder.countDocuments(), Sale.countDocuments()]);
-  console.log(`\nSeed de apresentação concluído: ${orders} OSs, ${sales} vendas, ${CATALOG.length} itens de estoque, ${customers.length} clientes.`);
-  console.log('\nAcessos:');
-  console.log('  Dona do sistema  dona@compucell.com     / dona123');
-  console.log('  Administrador    admin@email.com        / admin123');
-  console.log('  Técnico          tecnico@email.com      / tecnico123');
-  console.log('  Atendente        atendente@email.com    / atendente123  (com permissão extra de fechar o caixa)');
-  await mongoose.disconnect();
-})().catch(async (err) => {
-  console.error(err);
-  await mongoose.disconnect();
-  process.exit(1);
-});
+  console.log(`\nCompucell: ${orders} OSs, ${sales} vendas, ${CATALOG.length} itens de estoque, ${customers.length} clientes.`);
+}
