@@ -32,7 +32,7 @@ export default function useStatusFlow(onDone) {
     if (status === order.status) return;
     switch (status) {
       case 'ready':
-        if (order.status !== 'in_repair') return toast.error('Para marcar como pronta, a OS precisa estar em conserto.');
+        if (!['in_repair', 'awaiting_part'].includes(order.status)) return toast.error('Para marcar como pronta, a OS precisa estar em conserto.');
         return setFlow({ type: 'ready', order });
       case 'delivered':
         if (order.status !== 'ready') return toast.error('Só é possível entregar uma OS que está pronta.');

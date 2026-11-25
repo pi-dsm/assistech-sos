@@ -1,14 +1,15 @@
 import { useCallback, useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { Bar, BarChart, CartesianGrid, ComposedChart, Legend, Line, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts';
-import { AlertTriangle, ArrowDownRight, ArrowUpRight, ClipboardList, Clock, PackageX, ShieldAlert, Target } from 'lucide-react';
+import { AlertTriangle, ArrowDownRight, ArrowUpRight, ClipboardList, Clock, PackageX, ShieldAlert, Target } from '../../components/icons';
 import api, { errMsg } from '../../services/api';
 import { useAuth } from '../../context/AuthContext';
 import { useToast } from '../../context/ToastContext';
-import { brl, STATUS, WEEKDAYS } from '../../utils/format';
+import { brl, OPEN_STATUSES, STATUS, WEEKDAYS } from '../../utils/format';
 import { btnGhost, btnSm, Card, Kpi, PageHeader, Segmented, Spinner } from '../../components/ui';
 import RankList from '../../components/dashboard/RankList';
 import GoalsModal from '../../components/dashboard/GoalsModal';
+import RevenueForecast from '../../components/dashboard/RevenueForecast';
 
 const PERIODS = [
   { key: 'daily', label: 'Diário', now: 'Hoje', prev: 'ontem' },
@@ -59,7 +60,7 @@ export default function AssistanceMetrics() {
       ) : (
         <>
           <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
-            <Kpi label={`Faturamento · ${info.now}`} value={brl(c.revenue)} accent="bg-orange-50 text-orange-600">
+            <Kpi label={`Faturamento · ${info.now}`} value={brl(c.revenue)} accent="bg-blue-50 text-blue-700">
               {delta === null ? 'Sem base de comparação' : (
                 <span className={`inline-flex items-center gap-0.5 font-bold ${delta >= 0 ? 'text-emerald-600' : 'text-red-600'}`}>
                   {delta >= 0 ? <ArrowUpRight size={14} /> : <ArrowDownRight size={14} />}{Math.abs(delta).toLocaleString('pt-BR')}%
@@ -70,13 +71,13 @@ export default function AssistanceMetrics() {
             <Kpi label="Lucro líquido" value={brl(c.net_profit)} tone={c.net_profit < 0 ? 'text-red-600' : 'text-emerald-700'}>
               {c.delivered_orders} OS entregues · {c.sales_count} vendas · descontos {brl(c.discounts)}
             </Kpi>
-            <Kpi label="Perdas (garantia)" icon={ShieldAlert} value={brl(c.loss)} tone={c.loss > 0 ? 'text-red-600' : 'text-ink-900'} accent="bg-red-50 text-red-600">
+            <Kpi label="Perdas (garantia)" icon={ShieldAlert} value={brl(c.loss)} tone={c.loss > 0 ? 'text-red-600' : 'text-slate-900'} accent="bg-red-50 text-red-600">
               {data.warranty_returns} retorno(s) na janela do gráfico
             </Kpi>
             <Kpi label={`Meta ${info.label.toLowerCase()}`} icon={Target} value={data.goal.target > 0 ? `${progress ?? 0}%` : '—'} accent="bg-violet-50 text-violet-700">
               {data.goal.target > 0 ? (
                 <>
-                  <div className="mb-1 h-2 rounded-full bg-slate-100"><div className={`h-full rounded-full ${progress >= 100 ? 'bg-emerald-500' : 'bg-orange-500'}`} style={{ width: `${Math.min(progress || 0, 100)}%` }} /></div>
+                  <div className="mb-1 h-2 rounded-full bg-slate-100"><div className={`h-full rounded-full ${progress >= 100 ? 'bg-emerald-500' : 'bg-blue-600'}`} style={{ width: `${Math.min(progress || 0, 100)}%` }} /></div>
                   {brl(c.revenue)} de {brl(data.goal.target)}
                 </>
               ) : 'Nenhuma meta definida'}
@@ -86,11 +87,11 @@ export default function AssistanceMetrics() {
 
           <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
             <Link to="/app/os/abertas" className="block"><Kpi label="OSs na loja" icon={ClipboardList} value={overview.open_orders}>
-              {['received', 'in_diagnosis', 'in_repair', 'ready'].map((s) => `${STATUS[s].label}: ${overview.counts[s]}`).join(' · ')}
+              {OPEN_STATUSES.map((s) => `${STATUS[s].label}: ${overview.counts[s] || 0}`).join(' · ')}
             </Kpi></Link>
-            <Kpi label="Entregas atrasadas" icon={AlertTriangle} value={overview.overdue_orders} tone={overview.overdue_orders ? 'text-red-600' : 'text-ink-900'} accent="bg-red-50 text-red-600">Abertas com previsão vencida</Kpi>
-            <Kpi label="Prontas há +30 dias" icon={Clock} value={overview.ready_over_30_days} tone={overview.ready_over_30_days ? 'text-amber-600' : 'text-ink-900'} accent="bg-amber-50 text-amber-600">Risco de abandono do aparelho</Kpi>
-            <Link to="/app/gestao/perifericos" className="block"><Kpi label="Itens no estoque mínimo" icon={PackageX} value={overview.low_stock_products} tone={overview.low_stock_products ? 'text-amber-600' : 'text-ink-900'} accent="bg-amber-50 text-amber-600">Hoje: {brl(overview.today.revenue)} recebidos</Kpi></Link>
+            <Kpi label="Entregas atrasadas" icon={AlertTriangle} value={overview.overdue_orders} tone={overview.overdue_orders ? 'text-red-600' : 'text-slate-900'} accent="bg-red-50 text-red-600">Abertas com previsão vencida</Kpi>
+            <Kpi label="Prontas há +30 dias" icon={Clock} value={overview.ready_over_30_days} tone={overview.ready_over_30_days ? 'text-amber-600' : 'text-slate-900'} accent="bg-amber-50 text-amber-600">Risco de abandono do aparelho</Kpi>
+            <Link to="/app/gestao/perifericos" className="block"><Kpi label="Itens no estoque mínimo" icon={PackageX} value={overview.low_stock_products} tone={overview.low_stock_products ? 'text-amber-600' : 'text-slate-900'} accent="bg-amber-50 text-amber-600">Hoje: {brl(overview.today.revenue)} recebidos</Kpi></Link>
           </div>
 
           <Card title="Faturamento, lucro e perdas">
@@ -113,7 +114,7 @@ export default function AssistanceMetrics() {
           <div className="grid gap-4 lg:grid-cols-3">
             <Card title="Marcas mais atendidas"><RankList items={data.trackers.brands} empty="Sem OS na janela." /></Card>
             <Card title="Modelos mais atendidos"><RankList items={data.trackers.models} empty="Sem OS na janela." /></Card>
-            <Card title="Dias de pico" right={peak && peak.orders + peak.sales > 0 ? <span className="text-xs font-bold text-orange-600">Pico: {peak.name}</span> : null}>
+            <Card title="Dias de pico" right={peak && peak.orders + peak.sales > 0 ? <span className="text-xs font-bold text-blue-700">Pico: {peak.name}</span> : null}>
               <div className="h-44">
                 <ResponsiveContainer width="100%" height="100%">
                   <BarChart data={weekdays}>
@@ -127,6 +128,7 @@ export default function AssistanceMetrics() {
               </div>
             </Card>
           </div>
+          <RevenueForecast />
           <p className="text-xs text-slate-400">
             Marcas, modelos e dias de pico consideram toda a janela do gráfico ({period === 'daily' ? '7 dias' : period === 'weekly' ? '8 semanas' : '6 meses'}). Detalhes por área em
             {' '}<Link to="/app/os/metricas" className="font-semibold text-blue-700 hover:underline">Métricas de bancada</Link> e <Link to="/app/vendas/metricas" className="font-semibold text-blue-700 hover:underline">Métricas de balcão</Link>.

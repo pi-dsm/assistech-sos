@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from 'react';
-import { CheckCircle2, CreditCard, PackageCheck, Play, Save, Search, Wrench } from 'lucide-react';
+import { CheckCircle2, Clock, CreditCard, PackageCheck, Play, Save, Search, Wrench } from '../icons';
 import api, { errMsg } from '../../services/api';
 import { useAuth } from '../../context/AuthContext';
 import { useToast } from '../../context/ToastContext';
@@ -190,10 +190,17 @@ export default function OrderEditModal({ id, onClose, onChanged, initialTab = 'i
                 </div>
               </>
             )}
-            {order.status === 'in_repair' && (
+            {['in_repair', 'awaiting_part'].includes(order.status) && (
               <>
-                <Notice>Ao concluir, registre as peças usadas (ou marque que nenhuma foi usada) e a mão de obra. A OS passa para <b>Pronto p/ retirada</b>.</Notice>
-                <button className={btnPrimary} onClick={() => flow.request(order, 'ready')}><Wrench size={16} /> Registrar manutenção e concluir conserto</button>
+                <Notice>Ao concluir, registre as peças usadas (ou marque que nenhuma foi usada) e a mão de obra. A OS passa para <b>Concluído</b>.</Notice>
+                <div className="flex flex-wrap gap-2">
+                  <button className={btnPrimary} onClick={() => flow.request(order, 'ready')}><Wrench size={16} /> Registrar manutenção e concluir conserto</button>
+                  {order.status === 'in_repair' ? (
+                    <button className={btnGhost} onClick={() => flow.request(order, 'awaiting_part')}><Clock size={16} /> Aguardando peça</button>
+                  ) : (
+                    <button className={btnGhost} onClick={() => flow.request(order, 'in_repair')}><Play size={16} /> Peça chegou: voltar ao reparo</button>
+                  )}
+                </div>
               </>
             )}
             {(order.parts_used.length > 0 || order.no_parts_used) && (
@@ -234,7 +241,7 @@ export default function OrderEditModal({ id, onClose, onChanged, initialTab = 'i
               <div className="flex justify-between"><span>Peças</span><b>{brl(order.parts_total_amount)}</b></div>
               <div className="flex justify-between"><span>Mão de obra</span><b>{brl(order.labor_amount)}</b></div>
               <div className="flex justify-between text-emerald-700"><span>Desconto</span><b>{order.discount_amount > 0 ? `− ${brl(order.discount_amount)}` : '—'}</b></div>
-              <div className="flex justify-between border-t border-slate-100 pt-1.5 text-base font-extrabold text-ink-900"><span>Total de venda</span><span>{order.is_warranty ? 'Garantia' : brl(order.grand_total_amount)}</span></div>
+              <div className="flex justify-between border-t border-slate-100 pt-1.5 text-base font-extrabold text-slate-900"><span>Total de venda</span><span>{order.is_warranty ? 'Garantia' : brl(order.grand_total_amount)}</span></div>
               {showCosts && (
                 <>
                   <div className="flex justify-between text-slate-500"><span>Custo total</span><span>{brl(order.cost_total_amount)}</span></div>
@@ -248,7 +255,7 @@ export default function OrderEditModal({ id, onClose, onChanged, initialTab = 'i
                   <p>O desconto é aplicado na entrega, junto com o pagamento e o prazo de garantia.</p>
                   <button className={btnPrimary} onClick={() => flow.request(order, 'delivered')}><PackageCheck size={16} /> Entregar, aplicar desconto e cobrar</button>
                 </>
-              ) : order.status === 'in_repair' ? (
+              ) : ['in_repair', 'awaiting_part'].includes(order.status) ? (
                 <p>Peças e mão de obra são definidas ao concluir o conserto (aba Manutenção).</p>
               ) : closed ? (
                 <p>OS finalizada: os valores não podem mais ser alterados.</p>

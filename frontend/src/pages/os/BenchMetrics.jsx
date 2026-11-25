@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Bar, BarChart, CartesianGrid, Cell, Pie, PieChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts';
-import { Clock, Percent, Target, TrendingUp, Wallet, Wrench } from 'lucide-react';
+import { Clock, Percent, Target, TrendingUp, Wallet, Wrench } from '../../components/icons';
 import api, { errMsg } from '../../services/api';
 import { useAuth } from '../../context/AuthContext';
 import { useToast } from '../../context/ToastContext';
@@ -25,6 +25,12 @@ const CYCLE_BUCKETS = [
 ];
 const days = (a, b) => (a && b ? (new Date(b) - new Date(a)) / DAY : null);
 const avg = (list) => (list.length ? list.reduce((s, v) => s + v, 0) / list.length : 0);
+// Desvio padrão (amostral): mostra o quanto o tempo de bancada varia entre as OSs
+const stdDev = (list) => {
+  if (list.length < 2) return null;
+  const m = list.reduce((s, v) => s + v, 0) / list.length;
+  return Math.sqrt(list.reduce((s, v) => s + (v - m) ** 2, 0) / (list.length - 1));
+};
 const median = (list) => {
   if (!list.length) return 0;
   const s = [...list].sort((a, b) => a - b);
@@ -43,14 +49,14 @@ function GoalRow({ title, data, projection }) {
   return (
     <div className="rounded-xl border border-slate-200 p-4">
       <div className="flex items-baseline justify-between gap-2">
-        <p className="text-sm font-bold text-ink-900">{title}</p>
+        <p className="text-sm font-bold text-slate-900">{title}</p>
         <p className="text-xs text-slate-500">{target > 0 ? `meta ${brl(target)}` : 'sem meta'}</p>
       </div>
-      <p className="mt-1 text-2xl font-extrabold text-ink-900">{brl(revenue)}</p>
+      <p className="mt-1 text-2xl font-extrabold text-slate-900">{brl(revenue)}</p>
       {target > 0 ? (
         <>
           <div className="mt-2 h-2.5 rounded-full bg-slate-100">
-            <div className={`h-full rounded-full transition-all ${progress >= 100 ? 'bg-emerald-500' : progress >= 70 ? 'bg-orange-500' : 'bg-red-500'}`} style={{ width: `${Math.min(progress, 100)}%` }} />
+            <div className={`h-full rounded-full transition-all ${progress >= 100 ? 'bg-emerald-500' : progress >= 70 ? 'bg-blue-600' : 'bg-red-500'}`} style={{ width: `${Math.min(progress, 100)}%` }} />
           </div>
           <p className="mt-1.5 text-xs text-slate-600">
             {progress >= 100 ? <b className="text-emerald-700">Meta atingida ({pctFmt(progress, 0)})</b> : <>Faltam <b>{brl(target - revenue)}</b> · {pctFmt(progress, 0)}</>}
@@ -147,7 +153,7 @@ export default function BenchMetrics() {
       avgTicket: normal.length ? revenue / normal.length : 0,
       losses,
       categories,
-      cycle: { total: avg(total), median: median(total), repair: avg(repair), pickup: avg(pickup), buckets, n: total.length },
+      cycle: { total: avg(total), median: median(total), std: stdDev(total), repair: avg(repair), pickup: avg(pickup), buckets, n: total.length },
       conversion: { approved, declined, pending, rate: approved + declined > 0 ? (approved / (approved + declined)) * 100 : null },
       modesSource: allInPeriod,
     };
@@ -181,11 +187,11 @@ export default function BenchMetrics() {
             <Kpi label="Lucro líquido médio por OS" icon={Wallet} value={brl(metrics.avgNetProfit)} tone={metrics.avgNetProfit < 0 ? 'text-red-600' : 'text-emerald-700'} accent="bg-emerald-50 text-emerald-700">
               {metrics.count} OS entregues · perdas de garantia {brl(metrics.losses)}
             </Kpi>
-            <Kpi label="Ticket médio por OS" icon={TrendingUp} value={brl(metrics.avgTicket)} accent="bg-orange-50 text-orange-600">
+            <Kpi label="Ticket médio por OS" icon={TrendingUp} value={brl(metrics.avgTicket)} accent="bg-blue-50 text-blue-700">
               {metrics.warrantyCount} retorno(s) em garantia no período
             </Kpi>
             <Kpi label="Tempo médio de ciclo" icon={Clock} value={fmtDays(metrics.cycle.total)}>
-              Mediana {fmtDays(metrics.cycle.median)} · {metrics.cycle.n} OS
+              Mediana {fmtDays(metrics.cycle.median)} · desvio padrão {fmtDays(metrics.cycle.std)} · {metrics.cycle.n} OS
             </Kpi>
             <Kpi label="Conversão de orçamentos" icon={Percent} value={metrics.conversion.rate === null ? '—' : pctFmt(metrics.conversion.rate, 0)} accent="bg-violet-50 text-violet-700">
               {metrics.conversion.approved} aprovados · {metrics.conversion.declined} recusados/cancelados
@@ -235,9 +241,9 @@ export default function BenchMetrics() {
 
             <Card title="Tempo médio de ciclo">
               <div className="grid grid-cols-3 gap-2 text-center">
-                <div className="rounded-lg bg-slate-50 p-2"><p className="text-[11px] font-semibold uppercase text-slate-500">Entrada → pronta</p><p className="text-lg font-extrabold text-ink-900">{fmtDays(metrics.cycle.repair)}</p></div>
-                <div className="rounded-lg bg-slate-50 p-2"><p className="text-[11px] font-semibold uppercase text-slate-500">Pronta → entrega</p><p className="text-lg font-extrabold text-ink-900">{fmtDays(metrics.cycle.pickup)}</p></div>
-                <div className="rounded-lg bg-orange-50 p-2"><p className="text-[11px] font-semibold uppercase text-orange-700">Ciclo total</p><p className="text-lg font-extrabold text-orange-700">{fmtDays(metrics.cycle.total)}</p></div>
+                <div className="rounded-lg bg-slate-50 p-2"><p className="text-[11px] font-semibold uppercase text-slate-500">Entrada → pronta</p><p className="text-lg font-extrabold text-slate-900">{fmtDays(metrics.cycle.repair)}</p></div>
+                <div className="rounded-lg bg-slate-50 p-2"><p className="text-[11px] font-semibold uppercase text-slate-500">Pronta → entrega</p><p className="text-lg font-extrabold text-slate-900">{fmtDays(metrics.cycle.pickup)}</p></div>
+                <div className="rounded-lg bg-blue-50 p-2"><p className="text-[11px] font-semibold uppercase text-blue-800">Ciclo total</p><p className="text-lg font-extrabold text-blue-800">{fmtDays(metrics.cycle.total)}</p></div>
               </div>
               <div className="mt-4 h-48">
                 <ResponsiveContainer width="100%" height="100%">
@@ -277,7 +283,7 @@ export default function BenchMetrics() {
                       <Tooltip />
                     </PieChart>
                   </ResponsiveContainer>
-                  <p className="absolute inset-0 grid place-items-center text-2xl font-extrabold text-ink-900">{metrics.conversion.rate === null ? '—' : pctFmt(metrics.conversion.rate, 0)}</p>
+                  <p className="absolute inset-0 grid place-items-center text-2xl font-extrabold text-slate-900">{metrics.conversion.rate === null ? '—' : pctFmt(metrics.conversion.rate, 0)}</p>
                 </div>
                 <ul className="space-y-2 text-sm">
                   <li className="flex items-center gap-2"><i className="h-3 w-3 rounded-full bg-emerald-600" /> Aprovados (foram para conserto): <b>{metrics.conversion.approved}</b></li>
@@ -303,7 +309,7 @@ export default function BenchMetrics() {
                           <td className="py-2 font-semibold">{m.name}</td>
                           <td className="text-right">{m.total}</td>
                           <td className="pl-4">
-                            <span className="inline-flex items-center gap-1.5 rounded-full bg-orange-50 px-2.5 py-0.5 text-xs font-bold text-orange-700 ring-1 ring-inset ring-orange-200">
+                            <span className="inline-flex items-center gap-1.5 rounded-full bg-blue-50 px-2.5 py-0.5 text-xs font-bold text-blue-800 ring-1 ring-inset ring-blue-200">
                               <Wrench size={12} /> {m.top.category} · {m.top.count}/{m.total}
                             </span>
                           </td>

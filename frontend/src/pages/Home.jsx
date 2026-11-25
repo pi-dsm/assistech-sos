@@ -1,11 +1,11 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { Bar, BarChart, CartesianGrid, Cell, LabelList, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts';
-import { AlertTriangle, ArrowRight, BellRing, CheckCircle2, Clock, Lightbulb, PackageX, RefreshCw, ShoppingCart, Timer, Wrench } from 'lucide-react';
+import { AlertTriangle, ArrowRight, BellRing, CheckCircle2, Clock, Lightbulb, PackageX, RefreshCw, ShoppingCart, Timer, Wrench } from '../components/icons';
 import api, { errMsg } from '../services/api';
 import { useAuth } from '../context/AuthContext';
 import { useToast } from '../context/ToastContext';
-import { brl, daysSince, greeting, isOverdue, STATUS, stayDuration, todayLong } from '../utils/format';
+import { brl, daysSince, greeting, isOverdue, OPEN_STATUSES, STATUS, stayDuration, todayLong } from '../utils/format';
 import { addDays, dayKey, startOfDay } from '../utils/sales';
 import { PRODUCT_KINDS, productKind } from '../utils/catalog';
 import { btnGhost, btnSm, Card, EmptyState, Spinner, StatusBadge } from '../components/ui';
@@ -143,16 +143,16 @@ export default function Home() {
     <div className="mx-auto max-w-[1500px] space-y-6">
       <header className="flex flex-wrap items-end justify-between gap-3">
         <div>
-          <h1 className="text-3xl font-extrabold tracking-tight text-ink-900">{greeting()}, {firstName}!</h1>
+          <h1 className="text-3xl font-extrabold tracking-tight text-slate-900">{greeting()}, {firstName}!</h1>
           <p className="mt-0.5 text-slate-500">{todayLong()} · bom trabalho por aqui.</p>
         </div>
         <button className={`${btnGhost} ${btnSm}`} onClick={refreshAll}><RefreshCw size={14} /> Atualizar</button>
       </header>
 
       <div className="grid gap-4 sm:grid-cols-2">
-        <Link to="/app/os/nova" className="group flex items-center gap-4 rounded-2xl bg-orange-500 p-6 text-white shadow-pop transition hover:bg-orange-600">
+        <Link to="/app/os/nova" className="group flex items-center gap-4 rounded-2xl bg-blue-600 p-6 text-white shadow-pop transition hover:bg-blue-700">
           <span className="grid h-14 w-14 place-items-center rounded-xl bg-white/20"><Wrench size={28} /></span>
-          <span className="flex-1"><span className="block text-2xl font-extrabold">Nova OS</span><span className="text-orange-50">Receber um aparelho para conserto</span></span>
+          <span className="flex-1"><span className="block text-2xl font-extrabold">Nova OS</span><span className="text-blue-50">Receber um aparelho para conserto</span></span>
           <ArrowRight className="transition group-hover:translate-x-1" />
         </Link>
         <Link to="/app/vendas/nova" className="group flex items-center gap-4 rounded-2xl bg-ink-900 p-6 text-white shadow-pop transition hover:bg-ink-800">
@@ -208,9 +208,9 @@ export default function Home() {
           title="Situação atual das OSs"
           right={
             <div className="flex flex-wrap items-center gap-2">
-              {overview && ['received', 'in_diagnosis', 'in_repair', 'ready'].map((s) => (
+              {overview && OPEN_STATUSES.map((s) => (
                 <span key={s} className="flex items-center gap-1.5 rounded-full bg-slate-100 px-2.5 py-0.5 text-xs font-semibold text-slate-600">
-                  <i className={`h-2 w-2 rounded-full ${STATUS[s].bar}`} /> {STATUS[s].label} <b className="text-ink-900">{overview.counts[s]}</b>
+                  <i className={`h-2 w-2 rounded-full ${STATUS[s].bar}`} /> {STATUS[s].label} <b className="text-slate-900">{overview.counts[s] || 0}</b>
                 </span>
               ))}
               <Link to="/app/os/abertas" className="text-xs font-semibold text-blue-700 hover:underline">Abrir central</Link>
@@ -231,7 +231,7 @@ export default function Home() {
                 <tbody className="divide-y divide-slate-100">
                   {orders.map((o) => (
                     <tr key={o.id} onClick={() => setOpenOrder(o.id)} className="cursor-pointer hover:bg-blue-50/40">
-                      <td className="px-3 py-2 font-extrabold text-ink-900">#{o.service_order_number}</td>
+                      <td className="px-3 py-2 font-extrabold text-slate-900">#{o.service_order_number}</td>
                       <td className="px-3 py-2">{o.device?.brand} {o.device?.model}</td>
                       <td className="px-3 py-2">{o.customer?.name}</td>
                       <td className="max-w-60 truncate px-3 py-2 text-slate-500" title={o.reported_issue}>{o.reported_issue}</td>
@@ -267,10 +267,10 @@ export default function Home() {
                 </ResponsiveContainer>
               </div>
               <div className="mt-3 grid grid-cols-2 gap-2 text-xs sm:grid-cols-4">
-                <p className="rounded-lg bg-slate-50 p-2">Ontem<br /><b className="text-sm text-ink-900">{brl(summary.previous.revenue)}</b></p>
-                <p className="rounded-lg bg-slate-50 p-2">Vendas hoje<br /><b className="text-sm text-ink-900">{c.sales_count}</b></p>
-                <p className="rounded-lg bg-slate-50 p-2">OS entregues<br /><b className="text-sm text-ink-900">{c.delivered_orders}</b></p>
-                <p className="rounded-lg bg-slate-50 p-2">Meta<br /><b className="text-sm text-ink-900">{summary.goal.target > 0 ? `${summary.goal.progress ?? 0}%` : 'não definida'}</b></p>
+                <p className="rounded-lg bg-slate-50 p-2">Ontem<br /><b className="text-sm text-slate-900">{brl(summary.previous.revenue)}</b></p>
+                <p className="rounded-lg bg-slate-50 p-2">Vendas hoje<br /><b className="text-sm text-slate-900">{c.sales_count}</b></p>
+                <p className="rounded-lg bg-slate-50 p-2">OS entregues<br /><b className="text-sm text-slate-900">{c.delivered_orders}</b></p>
+                <p className="rounded-lg bg-slate-50 p-2">Meta<br /><b className="text-sm text-slate-900">{summary.goal.target > 0 ? `${summary.goal.progress ?? 0}%` : 'não definida'}</b></p>
               </div>
             </>
           )}
@@ -298,7 +298,7 @@ export default function Home() {
               <tbody className="divide-y divide-slate-100">
                 {sales.map((s) => (
                   <tr key={s.id} onClick={() => setOpenSale(s)} className="cursor-pointer align-top hover:bg-blue-50/40">
-                    <td className="px-3 py-2 font-extrabold text-ink-900">#{s.sale_number}</td>
+                    <td className="px-3 py-2 font-extrabold text-slate-900">#{s.sale_number}</td>
                     <td className="px-3 py-2 font-mono text-xs text-slate-500">{s.short_id}</td>
                     <td className="px-3 py-2">
                       {s.items.map((i, idx) => <p key={idx}><b>{i.quantity}×</b> {i.name}</p>)}
@@ -306,7 +306,7 @@ export default function Home() {
                     <td className="px-3 py-2 text-right text-slate-600">
                       {s.items.map((i, idx) => <p key={idx}>{brl(i.unit_price)}</p>)}
                     </td>
-                    <td className="px-3 py-2 text-right font-extrabold text-ink-900">{brl(s.grand_total_amount)}</td>
+                    <td className="px-3 py-2 text-right font-extrabold text-slate-900">{brl(s.grand_total_amount)}</td>
                   </tr>
                 ))}
               </tbody>

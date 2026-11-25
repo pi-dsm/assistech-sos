@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from 'react';
-import { Eye, EyeOff, FileText, RotateCcw, ShieldCheck } from 'lucide-react';
+import { Eye, EyeOff, FileText, RotateCcw, ShieldCheck } from '../icons';
 import api, { errMsg } from '../../services/api';
 import { useAuth } from '../../context/AuthContext';
 import { useToast } from '../../context/ToastContext';
@@ -10,6 +10,7 @@ import DeadlineField, { deadlinePayload, isDeadlineValid, newDeadline } from '..
 import { btnBlue, btnGhost, btnPrimary, btnSm, Card, Field, Info, inputCls, Modal, PaymentBadge, Spinner, StatusBadge } from '../ui';
 import PatternPad from './PatternPad';
 import ReceiptModal from './ReceiptModal';
+import WhatsAppButton from './WhatsAppButton';
 import StatusSelect from './StatusSelect';
 import PatternPlayer from './PatternPlayer';
 import { paymentLabel } from '../../utils/format';
@@ -106,7 +107,7 @@ export default function OrderDetails({ id, onChanged, onOpenOrder }) {
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
           <div className="flex flex-wrap items-center gap-2">
-            <h2 className="text-2xl font-extrabold text-ink-900">OS #{order.service_order_number}</h2>
+            <h2 className="text-2xl font-extrabold text-slate-900">OS #{order.service_order_number}</h2>
             {order.is_warranty && <span className="rounded bg-violet-100 px-2 py-0.5 text-xs font-bold text-violet-700">GARANTIA</span>}
             <StatusSelect order={order} onChange={flow.request} />
           </div>
@@ -115,6 +116,7 @@ export default function OrderDetails({ id, onChanged, onOpenOrder }) {
         <div className="flex flex-wrap gap-2">
           <button className={`${btnGhost} ${btnSm}`} onClick={() => setDoc('receipt')}><FileText size={14} /> Comprovante</button>
           {order.status === 'delivered' && <button className={`${btnGhost} ${btnSm}`} onClick={() => setDoc('warranty')}><ShieldCheck size={14} /> Termo de garantia</button>}
+          <WhatsAppButton order={order} className={`${btnGhost} ${btnSm}`} />
           {order.status === 'delivered' && order.is_under_warranty && (
             <button
               className={`${btnBlue} ${btnSm}`}

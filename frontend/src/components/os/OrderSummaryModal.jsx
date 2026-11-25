@@ -1,14 +1,15 @@
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { CalendarClock, ExternalLink, Pencil, ShieldAlert } from 'lucide-react';
+import { CalendarClock, ExternalLink, Pencil, ShieldAlert } from '../icons';
 import api, { errMsg } from '../../services/api';
 import { useAuth } from '../../context/AuthContext';
 import { useToast } from '../../context/ToastContext';
 import { brl, dateOnly, dt, DEVICE_TYPES, OPEN_STATUSES, paymentLabel } from '../../utils/format';
 import { btnGhost, btnPrimary, Modal, PaymentBadge, Spinner, StatusBadge } from '../ui';
+import WhatsAppButton from './WhatsAppButton';
 
 const Row = ({ label, children, strong, tone = '' }) => (
-  <div className={`flex justify-between gap-3 py-1.5 text-sm ${strong ? 'font-bold text-ink-900' : ''} ${tone}`}>
+  <div className={`flex justify-between gap-3 py-1.5 text-sm ${strong ? 'font-bold text-slate-900' : ''} ${tone}`}>
     <span className={strong ? '' : 'text-slate-500'}>{label}</span>
     <span className="text-right">{children}</span>
   </div>
@@ -39,7 +40,7 @@ export default function OrderSummaryModal({ id, onClose, onEdit }) {
         <div className="space-y-4">
           <div className="flex flex-wrap items-start justify-between gap-3 rounded-xl bg-slate-50 p-4">
             <div className="min-w-0">
-              <p className="font-bold text-ink-900">{order.device?.brand} {order.device?.model} <span className="font-normal text-slate-500">· {DEVICE_TYPES[order.device?.device_type]}</span></p>
+              <p className="font-bold text-slate-900">{order.device?.brand} {order.device?.model} <span className="font-normal text-slate-500">· {DEVICE_TYPES[order.device?.device_type]}</span></p>
               <p className="text-sm text-slate-600">{order.customer?.name} · {order.customer?.phone}</p>
               <p className="mt-2 text-sm text-slate-700"><span className="text-slate-500">Problema relatado:</span> {order.reported_issue}</p>
             </div>
@@ -56,7 +57,7 @@ export default function OrderSummaryModal({ id, onClose, onEdit }) {
               <div><p className="text-xs font-semibold uppercase text-slate-500">Previsão de orçamento</p><p className="font-bold">{dateOnly(order.estimated_budget_at)}</p></div>
             </div>
             <div className="flex items-center gap-3 rounded-xl border border-slate-200 p-3">
-              <CalendarClock className="text-orange-600" size={20} />
+              <CalendarClock className="text-blue-700" size={20} />
               <div><p className="text-xs font-semibold uppercase text-slate-500">Previsão de entrega</p><p className="font-bold">{dateOnly(order.estimated_delivery_at)}</p></div>
             </div>
           </div>
@@ -105,7 +106,7 @@ export default function OrderSummaryModal({ id, onClose, onEdit }) {
                   {brl(order.is_warranty ? -order.warranty_loss_amount : order.profit_amount)}
                 </Row>
               ) : (
-                <p className="pt-1 text-xs text-slate-400">Custo e lucro visíveis apenas para administradores.</p>
+                <p className="pt-1 text-xs text-slate-400">Custo e lucro visíveis apenas para quem tem permissão.</p>
               )}
             </section>
 
@@ -132,6 +133,7 @@ export default function OrderSummaryModal({ id, onClose, onEdit }) {
           </div>
 
           <div className="flex flex-wrap justify-end gap-2 border-t border-slate-100 pt-4">
+            <WhatsAppButton order={order} />
             <Link to={`/app/os/${order.id}`} className={btnGhost}><ExternalLink size={16} /> Ficha completa</Link>
             {open && onEdit && (
               <button className={btnPrimary} onClick={() => onEdit(order)}><Pencil size={16} /> Atualizar / editar OS</button>
