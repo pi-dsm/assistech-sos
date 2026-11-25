@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { AlertTriangle, Barcode, Boxes, Eye, LayoutGrid, List, Pencil, Plus, Trash2 } from 'lucide-react';
+import { AlertTriangle, Barcode, Boxes, Eye, LayoutGrid, List, Pencil, Plus, Trash2, Truck } from '../icons';
 import api, { errMsg } from '../../services/api';
 import { useAuth } from '../../context/AuthContext';
 import { useToast } from '../../context/ToastContext';
@@ -8,6 +8,7 @@ import { brl, dt, PRODUCT_CATEGORIES } from '../../utils/format';
 import { backendHasKind, marginPct, PRODUCT_KINDS, productKind } from '../../utils/catalog';
 import { btnGhost, btnPrimary, btnSm, ConfirmModal, EmptyState, Field, Info, inputCls, Modal, Notice, PageHeader, Pill, SearchInput, Segmented, Spinner, Toolbar } from '../ui';
 import SupplierSelect from '../SupplierSelect';
+import PurchaseModal from './PurchaseModal';
 import VoiceFill from '../VoiceFill';
 import { productVoice } from '../../utils/voiceSchemas';
 
@@ -28,7 +29,7 @@ const SORTS = [
   ['margin', 'Maior margem'],
 ];
 const MOVEMENT_KINDS = { initial: 'Estoque inicial', sale: 'Venda', refund: 'Estorno', adjustment: 'Ajuste' };
-const blank = (kind) => ({ name: '', barcode: '', category: kind === 'peripheral' ? 'accessory' : 'other', description: '', supplier: '', cost_price: '', sale_price: '', stock_quantity: '', min_stock: '' });
+const blank = (kind) => ({ name: '', barcode: '', category: kind === 'peripheral' ? 'accessory' : 'other', description: '', supplier: '', cost_price: '', sale_price: '', stock_quantity: '', min_stock: '', location: '', show_in_showcase: false });
 
 function StockPill({ p }) {
   return (
@@ -60,6 +61,7 @@ function DetailsModal({ product, canEdit, onClose, onEdit, onStock }) {
           <StockPill p={product} /> <span className="text-xs text-slate-500">mín. {product.min_stock}</span>
         </div>
         <Info label="Valor em estoque (custo)" value={brl(product.cost_price * product.stock_quantity)} />
+        <Info label="Local na bancada" value={product.location || '—'} />
         <Info label="Situação" value={product.is_active ? 'Ativo' : 'Inativo'} />
         <Info label="Cadastrado em" value={dt(product.created_at)} />
         <Info label="Atualizado em" value={dt(product.updated_at)} />
@@ -126,6 +128,7 @@ export default function ProductCatalog({ kind = 'peripheral' }) {
   const [stock, setStock] = useState({ delta: '', reason: '' });
   const [removing, setRemoving] = useState(null);
   const [saving, setSaving] = useState(false);
+  const [buying, setBuying] = useState(false);
 
   const load = useCallback(async () => {
     try {
@@ -178,6 +181,8 @@ export default function ProductCatalog({ kind = 'peripheral' }) {
       cost_price: Number(form.cost_price) || 0,
       sale_price: Number(form.sale_price),
       min_stock: Number(form.min_stock) || 0,
+      location: form.location || '',
+      show_in_showcase: !!form.show_in_showcase,
       ...(form.id ? {} : { stock_quantity: Number(form.stock_quantity) || 0 }),
     };
     setSaving(true);
@@ -241,6 +246,7 @@ export default function ProductCatalog({ kind = 'peripheral' }) {
     <div className="mx-auto max-w-[1400px] space-y-4">
       <PageHeader title={meta.label} subtitle={meta.subtitle}>
         <Segmented options={VIEWS} value={view} onChange={setView} label="Visualização" />
+        {canEdit && <button className={btnGhost} onClick={() => setBuying(true)} disabled={!all.length}><Truck size={18} /> Lançar compra</button>}
         {canEdit && <button className={btnPrimary} onClick={() => setForm(blank(kind))} disabled={kindPending}><Plus size={18} /> Adicionar {meta.singular}</button>}
       </PageHeader>
 
@@ -292,7 +298,7 @@ export default function ProductCatalog({ kind = 'peripheral' }) {
               {p.description && kind !== 'peripheral' && <p className="mt-1 line-clamp-2 text-xs text-slate-500">{p.description}</p>}
               <div className="mt-3 grid grid-cols-2 gap-2 text-sm">
                 <div className="rounded-lg bg-slate-50 p-2"><p className="text-[11px] uppercase text-slate-500">Custo</p><p className="font-semibold">{brl(p.cost_price)}</p></div>
-                <div className="rounded-lg bg-orange-50 p-2"><p className="text-[11px] uppercase text-orange-700">Venda</p><p className="font-extrabold text-orange-700">{brl(p.sale_price)}</p></div>
+                <div className="rounded-lg bg-blue-50 p-2"><p className="text-[11px] uppercase text-blue-800">Venda</p><p className="font-extrabold text-blue-800">{brl(p.sale_price)}</p></div>
               </div>
               <div className="mt-3 flex gap-2 border-t border-slate-100 pt-3">
                 <button className={`${btnGhost} ${btnSm} flex-1`} onClick={() => setDetails(p)}><Eye size={14} /> Detalhes</button>
@@ -378,6 +384,12 @@ export default function ProductCatalog({ kind = 'peripheral' }) {
             <Field label="Estoque mínimo (alerta)">
               <input className={inputCls} type="number" min="0" value={form.min_stock} onChange={(e) => setForm((s) => ({ ...s, min_stock: e.target.value }))} />
             </Field>
+            <Field label="Local na bancada" hint="Ex.: gaveta 3, prateleira B">
+              <input className={inputCls} value={form.location || ''} onChange={(e) => setForm((s) => ({ ...s, location: e.target.value }))} />
+            </Field>
+            <label className="flex items-center gap-2 self-end pb-2 text-sm">
+              <input type="checkbox" checked={!!form.show_in_showcase} onChange={(e) => setForm((s) => ({ ...s, show_in_showcase: e.target.checked }))} /> Mostrar na vitrine pública
+            </label>
             {!form.id ? (
               <Field label="Estoque inicial">
                 <input className={inputCls} type="number" min="0" value={form.stock_quantity} onChange={(e) => setForm((s) => ({ ...s, stock_quantity: e.target.value }))} />
@@ -410,6 +422,8 @@ export default function ProductCatalog({ kind = 'peripheral' }) {
           </div>
         </Modal>
       )}
+
+      {buying && <PurchaseModal products={all.filter((p) => p.is_active !== false)} onClose={() => setBuying(false)} onDone={() => { setBuying(false); load(); }} />}
 
       {removing && (
         <ConfirmModal
